@@ -136,7 +136,7 @@ class App(tk.Tk):
             self.frames[F.__name__] = frame
             frame.grid(row=0, column=0, sticky="nsew")
 
-        self.show("DashboardFrame")
+        self.show("ServicesFrame")
         self.after(100, lambda: SplashScreen(self))
 
     def open_maximized(self):
@@ -211,7 +211,7 @@ class App(tk.Tk):
 
     def _build_sidebar_buttons(self):
         tk.Frame(self.sidebar, height=10, bg="#243246").pack(fill="x")
-        self._nav_btn("🏠  Orçamento", "DashboardFrame")
+        self._nav_btn("🏠  Orçamento", "ServicesFrame")
         self._nav_btn("👤  Clientes", "ClientsFrame")
         self._nav_btn("🔧  Ordem de Serviço", "ServicesFrame")
         self._nav_btn("💰  Financeiro", "FinanceFrame")
@@ -875,12 +875,12 @@ class ServicesFrame(tk.Frame):
         top.pack(fill="x")
         tk.Label(
             top,
-            text="Serviços",
+            text="Orçamento",
             bg="#f5f6f8",
             fg="#1f2a37",
             font=("Segoe UI", 18, "bold"),
         ).pack(side="left")
-
+       
         style = ttk.Style()
         style.theme_use("clam")
         style.configure(
@@ -896,14 +896,42 @@ class ServicesFrame(tk.Frame):
             foreground="#1f2937",
         )
 
-        self.client_info = tk.Label(
-            self,
-            text="Cliente selecionado: nenhum",
-            bg="#f5f6f8",
-            fg="#374151",
-            font=("Segoe UI", 10, "bold"),
-        )
-        self.client_info.pack(anchor="w", pady=(8, 6))
+        # CAMPOS DO ORÇAMENTO
+        campos_orcamento = tk.Frame(self, bg="#f5f6f8")
+        campos_orcamento.pack(anchor="w", pady=(8, 6))
+
+        self.nome_orcamento_var = tk.StringVar()
+        self.veiculo_orcamento_var = tk.StringVar()
+
+        tk.Label(
+        campos_orcamento,
+        text="Nome:",
+        bg="#f5f6f8",
+        fg="#374151",
+        font=("Segoe UI", 10, "bold"),
+        ).grid(row=0, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
+
+        tk.Entry(
+        campos_orcamento,
+        textvariable=self.nome_orcamento_var,
+        font=("Segoe UI", 10),
+        width=35,
+        ).grid(row=0, column=1, sticky="w", pady=(0, 6))
+
+        tk.Label(
+        campos_orcamento,
+        text="Veículo:",
+        bg="#f5f6f8",
+        fg="#374151",
+        font=("Segoe UI", 10, "bold"),
+        ).grid(row=1, column=0, sticky="w", padx=(0, 8))
+
+        tk.Entry(
+        campos_orcamento,
+        textvariable=self.veiculo_orcamento_var,
+        font=("Segoe UI", 10),
+        width=35,
+        ).grid(row=1, column=1, sticky="w")
 
         cols = ("id", "quantity", "description", "price")
         self.tree = ttk.Treeview(self, columns=cols, show="headings", style="Services.Treeview")
@@ -946,7 +974,7 @@ class ServicesFrame(tk.Frame):
         tk.Button(linha1, text="Adicionar", command=self.add_dialog).pack(side="left", padx=10)
         tk.Button(linha1, text="Editar", command=self.edit_dialog).pack(side="left", padx=5)
         tk.Button(linha1, text="Excluir", command=self.delete_selected).pack(side="left", padx=10)
-        tk.Button(linha1, text="GerarPDF", command=self.gerar_pdf).pack(side="left", padx=5)
+        tk.Button(linha1, text="CriarOrçamento", command=self.gerar_pdf).pack(side="left", padx=5)
         tk.Button(linha1, text="Imprimir").pack(side="left", padx=5)
 
         # ==============================
@@ -1011,14 +1039,7 @@ class ServicesFrame(tk.Frame):
         self.sugestoes.bind("<<ListboxSelect>>", self.selecionar_sugestao)
 
     def atualizar_label_cliente(self):
-        if self.selected_client_id:
-            texto = (
-                f"Cliente selecionado: {self.selected_client_name} | "
-                f"Placa: {self.selected_client_plate or '-'}"
-            )
-        else:
-            texto = "Cliente selecionado: nenhum"
-        self.client_info.config(text=texto)
+        pass
 
     def buscar_cliente(self):
         termo_original = self.search_var.get().strip()
