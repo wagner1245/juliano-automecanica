@@ -14,7 +14,7 @@ import os
 
 from config import APP_TITLE, LOGO_PATH
 from database import db, init_db
-from PIL import Image, ImageTk
+from PIL import Image, ImageTk, ImageDraw, ImageFont
 
 class SplashScreen(tk.Toplevel):
     def __init__(self, parent):
@@ -861,6 +861,7 @@ class EditClientDialog(tk.Toplevel):
         messagebox.showinfo("Sucesso", "Cliente atualizado com sucesso.")
         self.destroy()
 
+
 class ServicesFrame(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg="#f5f6f8")
@@ -871,6 +872,11 @@ class ServicesFrame(tk.Frame):
         self.selected_client_plate = ""
         self._resultados_busca = []
 
+        # estado atual do orçamento
+        self.orcamento_cliente_nome = ""
+        self.orcamento_cliente_veiculo = ""
+        self.orcamento_cliente_tipo = ""   # "novo" ou "existente"
+
         top = tk.Frame(self, bg="#f5f6f8")
         top.pack(fill="x")
         tk.Label(
@@ -880,7 +886,7 @@ class ServicesFrame(tk.Frame):
             fg="#1f2a37",
             font=("Segoe UI", 18, "bold"),
         ).pack(side="left")
-       
+
         style = ttk.Style()
         style.theme_use("clam")
         style.configure(
@@ -896,7 +902,9 @@ class ServicesFrame(tk.Frame):
             foreground="#1f2937",
         )
 
-        # CAMPOS DO ORÇAMENTO
+        # ================================
+        # CAMPOS DO ORÇAMENTO (CLIENTE NOVO)
+        # ================================
         campos_orcamento = tk.Frame(self, bg="#f5f6f8")
         campos_orcamento.pack(anchor="w", pady=(8, 6))
 
@@ -904,34 +912,63 @@ class ServicesFrame(tk.Frame):
         self.veiculo_orcamento_var = tk.StringVar()
 
         tk.Label(
-        campos_orcamento,
-        text="Nome:",
-        bg="#f5f6f8",
-        fg="#374151",
-        font=("Segoe UI", 10, "bold"),
-        ).grid(row=0, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
-
-        tk.Entry(
-        campos_orcamento,
-        textvariable=self.nome_orcamento_var,
-        font=("Segoe UI", 10),
-        width=35,
-        ).grid(row=0, column=1, sticky="w", pady=(0, 6))
+            campos_orcamento,
+            text="Cliente novo (preencha abaixo):",
+            bg="#f5f6f8",
+            fg="#b45309",
+            font=("Segoe UI", 10, "bold"),
+        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
 
         tk.Label(
-        campos_orcamento,
-        text="Veículo:",
-        bg="#f5f6f8",
-        fg="#374151",
-        font=("Segoe UI", 10, "bold"),
-        ).grid(row=1, column=0, sticky="w", padx=(0, 8))
+            campos_orcamento,
+            text="Nome:",
+            bg="#f5f6f8",
+            fg="#374151",
+            font=("Segoe UI", 10, "bold"),
+        ).grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
 
         tk.Entry(
-        campos_orcamento,
-        textvariable=self.veiculo_orcamento_var,
-        font=("Segoe UI", 10),
-        width=35,
-        ).grid(row=1, column=1, sticky="w")
+            campos_orcamento,
+            textvariable=self.nome_orcamento_var,
+            font=("Segoe UI", 10),
+            width=35,
+        ).grid(row=1, column=1, sticky="w", pady=(0, 6))
+
+        tk.Label(
+            campos_orcamento,
+            text="Veículo:",
+            bg="#f5f6f8",
+            fg="#374151",
+            font=("Segoe UI", 10, "bold"),
+        ).grid(row=2, column=0, sticky="w", padx=(0, 8))
+
+        tk.Entry(
+            campos_orcamento,
+            textvariable=self.veiculo_orcamento_var,
+            font=("Segoe UI", 10),
+            width=35,
+        ).grid(row=2, column=1, sticky="w")
+
+        tk.Button(
+            campos_orcamento,
+            text="Vincular Cliente Novo",
+            command=self.vincular_cliente_novo
+        ).grid(row=3, column=1, sticky="w", pady=(8, 0))
+
+        tk.Button(
+            campos_orcamento,
+            text="Limpar Cliente",
+            command=self.limpar_cliente
+        ).grid(row=3, column=2, sticky="w", padx=(10, 0), pady=(8, 0))
+
+        self.cliente_vinculado_var = tk.StringVar(value="Cliente vinculado: nenhum")
+        tk.Label(
+            self,
+            textvariable=self.cliente_vinculado_var,
+            bg="#f5f6f8",
+            fg="#1f2937",
+            font=("Segoe UI", 10, "bold")
+        ).pack(anchor="w", padx=10, pady=(4, 8))
 
         cols = ("id", "quantity", "description", "price")
         self.tree = ttk.Treeview(self, columns=cols, show="headings", style="Services.Treeview")
@@ -974,7 +1011,7 @@ class ServicesFrame(tk.Frame):
         tk.Button(linha1, text="Adicionar", command=self.add_dialog).pack(side="left", padx=10)
         tk.Button(linha1, text="Editar", command=self.edit_dialog).pack(side="left", padx=5)
         tk.Button(linha1, text="Excluir", command=self.delete_selected).pack(side="left", padx=10)
-        tk.Button(linha1, text="CriarOrçamento", command=self.gerar_pdf).pack(side="left", padx=5)
+        tk.Button(linha1, text="CriarOrçamento", command=self.criar_orcamento_imagem).pack(side="left", padx=5)
         tk.Button(linha1, text="Imprimir").pack(side="left", padx=5)
 
         # ==============================
@@ -1007,7 +1044,7 @@ class ServicesFrame(tk.Frame):
             font=("Segoe UI", 10, "bold")
         ).pack(side="left", padx=(10, 5))
 
-        self.total_pecas_var = tk.StringVar()
+        self.total_pecas_var = tk.StringVar(value="R$ 0,00")
         self.total_pecas = tk.Label(
             linha2,
             textvariable=self.total_pecas_var,
@@ -1038,8 +1075,64 @@ class ServicesFrame(tk.Frame):
         self.sugestoes.pack_forget()
         self.sugestoes.bind("<<ListboxSelect>>", self.selecionar_sugestao)
 
+    def limpar_cliente(self):
+        # limpa cliente novo
+        self.nome_orcamento_var.set("")
+        self.veiculo_orcamento_var.set("")
+
+        # limpa cliente existente
+        self.selected_client_id = None
+        self.selected_client_name = ""
+        self.selected_client_cpf = ""
+        self.selected_client_plate = ""
+
+        # limpa busca
+        self.search_var.set("")
+        self.sugestoes.pack_forget()
+
+        # limpa cliente vinculado
+        self.orcamento_cliente_nome = ""
+        self.orcamento_cliente_veiculo = ""
+        self.orcamento_cliente_tipo = ""
+
+        # atualiza label
+        self.atualizar_label_cliente()     
+
     def atualizar_label_cliente(self):
-        pass
+        if self.orcamento_cliente_nome and self.orcamento_cliente_veiculo:
+            tipo = "Novo" if self.orcamento_cliente_tipo == "novo" else "Existente"
+            self.cliente_vinculado_var.set(
+                f"Cliente vinculado: {self.orcamento_cliente_nome} | "
+                f"Veículo: {self.orcamento_cliente_veiculo} | Tipo: {tipo}"
+            )
+        else:
+            self.cliente_vinculado_var.set("Cliente vinculado: nenhum")
+
+    def vincular_cliente_novo(self):
+        nome = self.nome_orcamento_var.get().strip()
+        veiculo = self.veiculo_orcamento_var.get().strip()
+
+        if not nome:
+            messagebox.showwarning("Atenção", "Preencha o nome do cliente.")
+            return
+
+        if not veiculo:
+            messagebox.showwarning("Atenção", "Preencha o veículo.")
+            return
+
+        if self.selected_client_id:
+            messagebox.showwarning(
+                "Atenção",
+                "Já existe um cliente selecionado pela busca.\n"
+                "Limpe a busca antes de vincular um cliente novo."
+            )
+            return
+
+        self.orcamento_cliente_nome = nome
+        self.orcamento_cliente_veiculo = veiculo
+        self.orcamento_cliente_tipo = "novo"
+        self.atualizar_label_cliente()
+        messagebox.showinfo("Sucesso", "Cliente novo vinculado ao orçamento.")
 
     def buscar_cliente(self):
         termo_original = self.search_var.get().strip()
@@ -1051,11 +1144,6 @@ class ServicesFrame(tk.Frame):
 
         if not termo_original:
             self.sugestoes.pack_forget()
-            #self.selected_client_id = None
-            #self.selected_client_name = ""
-            #self.selected_client_cpf = ""
-            #self.selected_client_plate = ""
-            #self.refresh()
             return
 
         con = db()
@@ -1103,27 +1191,31 @@ class ServicesFrame(tk.Frame):
         if indice >= len(self._resultados_busca):
             return
 
-        client_id, cpf, plate, name, _vehicle = self._resultados_busca[indice]
+        client_id, cpf, plate, name, vehicle = self._resultados_busca[indice]
 
         self.selected_client_id = client_id
         self.selected_client_name = name or ""
         self.selected_client_cpf = cpf or ""
         self.selected_client_plate = plate or ""
 
+        self.nome_orcamento_var.set(name or "")
+        self.veiculo_orcamento_var.set(vehicle or "")
+
+        self.orcamento_cliente_nome = name or ""
+        self.orcamento_cliente_veiculo = vehicle or ""
+        self.orcamento_cliente_tipo = "existente"
+
         self.search_var.set("")
         self.sugestoes.pack_forget()
         self.atualizar_label_cliente()
-        self.refresh()
 
     def atualizar_totais(self):
         total_pecas = 0.0
 
         for item in self.tree.get_children():
             valores = self.tree.item(item, "values")
-
             if len(valores) >= 4:
                 valor_str = str(valores[3]).strip()
-
                 try:
                     valor_str = valor_str.replace("R$", "").replace(" ", "")
                     valor_str = valor_str.replace(".", "").replace(",", ".")
@@ -1141,7 +1233,6 @@ class ServicesFrame(tk.Frame):
             mao_obra = 0.0
 
         total_servicos = mao_obra + total_pecas
-
         self.total_pecas_var.set(f"R$ {total_pecas:.2f}".replace(".", ","))
         self.total_servicos.config(text=f"R$ {total_servicos:.2f}".replace(".", ","))
 
@@ -1151,84 +1242,90 @@ class ServicesFrame(tk.Frame):
             return None
         return int(self.tree.item(sel[0], "values")[0])
 
+    def _proximo_id_tree(self):
+        maior = 0
+        for item in self.tree.get_children():
+            try:
+                atual = int(self.tree.item(item, "values")[0])
+                if atual > maior:
+                    maior = atual
+            except Exception:
+                pass
+        return maior + 1
+
     def add_dialog(self):
-        if not self.selected_client_id:
-            messagebox.showwarning("Atenção", "Selecione um cliente primeiro.")
+        if not self.orcamento_cliente_nome or not self.orcamento_cliente_veiculo:
+            messagebox.showwarning(
+                "Atenção",
+                "Vincule primeiro um cliente ao orçamento.\n\n"
+                "Use o botão 'Vincular Cliente Novo' ou selecione um cliente pela busca."
+            )
             return
-        ServiceDialog(self, title="Adicionar Serviço", on_save=self._insert)
+
+        ServiceDialog(self, title="Adicionar Serviço", on_save=self._insert_manual)
 
     def edit_dialog(self):
-        if not self.selected_client_id:
-            messagebox.showwarning("Atenção", "Selecione um cliente primeiro.")
-            return
-
         sid = self._selected_id()
         if not sid:
             messagebox.showwarning("Atenção", "Selecione um serviço.")
             return
 
-        con = db()
-        cur = con.cursor()
-        cur.execute(
-            "SELECT quantity, description, price FROM services WHERE id=? AND client_id=?",
-            (sid, self.selected_client_id),
-        )
-        row = cur.fetchone()
-        con.close()
-
-        if not row:
-            messagebox.showwarning("Atenção", "Serviço não encontrado para este cliente.")
+        item_selecionado = self.tree.selection()[0]
+        valores = self.tree.item(item_selecionado, "values")
+        if len(valores) < 4:
+            messagebox.showwarning("Atenção", "Serviço inválido.")
             return
+
+        initial = (
+            float(str(valores[1]).replace(",", ".")),
+            valores[2],
+            float(str(valores[3]).replace(".", "").replace(",", "."))
+        )
 
         ServiceDialog(
             self,
             title="Editar Serviço",
-            initial=row,
-            on_save=lambda data: self._update(sid, data),
+            initial=initial,
+            on_save=lambda data: self._update_manual(item_selecionado, sid, data),
         )
 
-    def _insert(self, data):
-        con = db()
-        cur = con.cursor()
-        cur.execute(
-            """
-            INSERT INTO services(client_id, quantity, description, price, created_at)
-            VALUES(?,?,?,?,?)
-            """,
-            (
-                self.selected_client_id,
-                float(data[0]),
-                data[1],
-                float(data[2]),
-                datetime.now().isoformat(timespec="seconds"),
+    def _insert_manual(self, data):
+        quantidade = float(data[0])
+        descricao = data[1]
+        preco = float(data[2])
+
+        novo_id = self._proximo_id_tree()
+        tag = "linha1" if (len(self.tree.get_children()) % 2 == 0) else "linha2"
+
+        self.tree.insert(
+            "",
+            "end",
+            values=(
+                novo_id,
+                quantidade,
+                descricao,
+                f"{preco:.2f}".replace(".", ",")
             ),
+            tags=(tag,),
         )
-        con.commit()
-        con.close()
-        self.refresh()
+        self.atualizar_totais()
 
-    def _update(self, sid, data):
-        con = db()
-        cur = con.cursor()
-        cur.execute(
-            """
-            UPDATE services
-            SET quantity=?, description=?, price=?
-            WHERE id=? AND client_id=?
-            """,
-            (float(data[0]), data[1], float(data[2]), sid, self.selected_client_id),
+    def _update_manual(self, item_id, sid, data):
+        quantidade = float(data[0])
+        descricao = data[1]
+        preco = float(data[2])
+
+        tags = self.tree.item(item_id, "tags")
+        self.tree.item(
+            item_id,
+            values=(sid, quantidade, descricao, f"{preco:.2f}".replace(".", ",")),
+            tags=tags,
         )
-        con.commit()
-        con.close()
-        self.refresh()
+        self.atualizar_totais()
 
     def delete_selected(self):
-        if not self.selected_client_id:
-            messagebox.showwarning("Atenção", "Selecione um cliente primeiro.")
-            return
-
-        sid = self._selected_id()
-        if not sid:
+        sel = self.tree.selection()
+        if not sel:
             messagebox.showwarning("Atenção", "Selecione um serviço.")
             return
 
@@ -1238,53 +1335,159 @@ class ServicesFrame(tk.Frame):
         ):
             return
 
-        con = db()
-        cur = con.cursor()
-        cur.execute(
-            "DELETE FROM services WHERE id=? AND client_id=?",
-            (sid, self.selected_client_id),
-        )
-        con.commit()
-        con.close()
-        self.refresh()
+        for item in sel:
+            self.tree.delete(item)
 
-    def gerar_pdf(self):
-        messagebox.showinfo("Gerar PDF", "Função de gerar PDF será criada em breve.")
+        self.atualizar_totais()
 
-    def refresh(self):
-        for i in self.tree.get_children():
-            self.tree.delete(i)
+    def criar_orcamento_imagem(self):
+        try:
+            nome_cliente = self.orcamento_cliente_nome.strip() or self.nome_orcamento_var.get().strip()
+            veiculo_cliente = self.orcamento_cliente_veiculo.strip() or self.veiculo_orcamento_var.get().strip()
 
-        self.atualizar_label_cliente()
+            if not nome_cliente:
+                messagebox.showwarning("Atenção", "Informe o nome do cliente.")
+                return
 
-        if not self.selected_client_id:
-            self.total_pecas_var.set("R$ 0,00")
-            self.total_servicos.config(text="R$ 0,00")
-            return
+            if not veiculo_cliente:
+                messagebox.showwarning("Atenção", "Informe o veículo do cliente.")
+                return
 
-        con = db()
-        cur = con.cursor()
-        cur.execute(
-            """
-            SELECT id, quantity, description, price
-            FROM services
-            WHERE client_id=?
-            ORDER BY id DESC
-            """,
-            (self.selected_client_id,),
-        )
-        rows = cur.fetchall()
-        con.close()
+            itens = []
+            for item_id in self.tree.get_children():
+                valores = self.tree.item(item_id, "values")
+                if len(valores) >= 4:
+                    quantidade = str(valores[1])
+                    descricao = str(valores[2])
+                    valor = str(valores[3])
+                    itens.append((quantidade, descricao, valor))
 
-        for i, row in enumerate(rows):
-            tag = "linha1" if i % 2 == 0 else "linha2"
-            self.tree.insert(
-                "",
-                "end",
-                values=(row[0], row[1], row[2], f"{row[3]:.2f}".replace(".", ",")),
-                tags=(tag,),
+            if not itens:
+                messagebox.showwarning("Atenção", "Adicione pelo menos um serviço ao orçamento.")
+                return
+
+            nome_oficina = "Juliano Automecânica"
+            data_atual = datetime.now().strftime("%d/%m/%Y")
+            hora_arquivo = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+            mao_de_obra = self.mao_obra_var.get().strip() or "0,00"
+            total_pecas = self.total_pecas_var.get().strip() or "R$ 0,00"
+            total_servicos = self.total_servicos.cget("text").strip() or "R$ 0,00"
+
+            largura = 1000
+            altura = 1400
+            margem = 50
+
+            img = Image.new("RGB", (largura, altura), "white")
+            draw = ImageDraw.Draw(img)
+
+            try:
+                fonte_titulo = ImageFont.truetype("arial.ttf", 42)
+                fonte_subtitulo = ImageFont.truetype("arial.ttf", 28)
+                fonte_texto = ImageFont.truetype("arial.ttf", 24)
+                fonte_negrito = ImageFont.truetype("arialbd.ttf", 24)
+                fonte_pequena = ImageFont.truetype("arial.ttf", 20)
+            except Exception:
+                fonte_titulo = ImageFont.load_default()
+                fonte_subtitulo = ImageFont.load_default()
+                fonte_texto = ImageFont.load_default()
+                fonte_negrito = ImageFont.load_default()
+                fonte_pequena = ImageFont.load_default()
+
+            y = margem
+
+            logo_path = LOGO_PATH
+            if os.path.exists(logo_path):
+                try:
+                    logo = Image.open(logo_path).convert("RGBA")
+                    logo.thumbnail((140, 140))
+                    img.paste(logo, (margem, y), logo)
+                except Exception:
+                    pass
+
+            draw.text((220, y + 20), nome_oficina, fill="black", font=fonte_titulo)
+            draw.text((220, y + 80), "ORÇAMENTO", fill="black", font=fonte_subtitulo)
+
+            y += 170
+            draw.line((margem, y, largura - margem, y), fill="black", width=2)
+            y += 30
+
+            draw.text((margem, y), f"Data: {data_atual}", fill="black", font=fonte_negrito)
+            y += 45
+            draw.text((margem, y), f"Cliente: {nome_cliente}", fill="black", font=fonte_texto)
+            y += 40
+            draw.text((margem, y), f"Veículo: {veiculo_cliente}", fill="black", font=fonte_texto)
+            y += 50
+
+            draw.line((margem, y, largura - margem, y), fill="gray", width=1)
+            y += 25
+
+            x_qtd = margem
+            x_desc = 180
+            x_valor = 800
+
+            draw.text((x_qtd, y), "QTD", fill="black", font=fonte_negrito)
+            draw.text((x_desc, y), "DESCRIÇÃO", fill="black", font=fonte_negrito)
+            draw.text((x_valor, y), "VALOR", fill="black", font=fonte_negrito)
+            y += 35
+
+            draw.line((margem, y, largura - margem, y), fill="black", width=1)
+            y += 20
+
+            for qtd, descricao, valor in itens:
+                draw.text((x_qtd, y), qtd, fill="black", font=fonte_texto)
+                draw.text((x_desc, y), descricao, fill="black", font=fonte_texto)
+                draw.text((x_valor, y), f"R$ {valor}", fill="black", font=fonte_texto)
+                y += 35
+
+                if y > altura - 250:
+                    break
+
+            y += 20
+            draw.line((margem, y, largura - margem, y), fill="gray", width=1)
+            y += 30
+
+            mao_de_obra_formatado = mao_de_obra
+            if not mao_de_obra_formatado.startswith("R$"):
+                mao_de_obra_formatado = f"R$ {mao_de_obra_formatado}"
+
+            draw.text((margem, y), f"Mão de Obra: {mao_de_obra_formatado}", fill="black", font=fonte_texto)
+            y += 40
+            draw.text((margem, y), f"Total de Peças: {total_pecas}", fill="black", font=fonte_texto)
+            y += 40
+            draw.text((margem, y), f"Total de Serviços: {total_servicos}", fill="black", font=fonte_negrito)
+            y += 70
+
+            draw.line((margem, y, largura - margem, y), fill="black", width=1)
+            y += 25
+            draw.text((margem, y), "Obrigado pela preferência!", fill="black", font=fonte_pequena)
+
+            pasta_saida = "orcamentos"
+            os.makedirs(pasta_saida, exist_ok=True)
+
+            nome_limpo = "".join(c for c in nome_cliente if c.isalnum() or c in (" ", "_", "-")).strip()
+            nome_limpo = nome_limpo.replace(" ", "_")
+
+            nome_arquivo = f"orcamento_{nome_limpo}_{hora_arquivo}.png"
+            caminho_saida = os.path.join(pasta_saida, nome_arquivo)
+
+            img.save(caminho_saida)
+
+            try:
+                os.startfile(caminho_saida)
+            except Exception:
+                pass
+
+            messagebox.showinfo(
+                "Sucesso",
+                f"Orçamento criado com sucesso!\n\nImagem salva em:\n{caminho_saida}"
             )
 
+        except Exception as e:
+            messagebox.showerror("Erro", f"Erro ao criar orçamento:\n{e}")
+
+    def refresh(self):
+        self.atualizar_label_cliente()
         self.atualizar_totais()
 
 class OrdersFrame(tk.Frame):
