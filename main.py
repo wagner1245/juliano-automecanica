@@ -953,13 +953,13 @@ class ServicesFrame(tk.Frame):
             campos_orcamento,
             text="Vincular Cliente Novo",
             command=self.vincular_cliente_novo
-        ).grid(row=3, column=1, sticky="w", pady=(8, 0))
+        ).grid(row=1, column=2, padx=(20, 0), pady=(0, 6))
 
         tk.Button(
             campos_orcamento,
             text="Limpar Cliente",
             command=self.limpar_cliente
-        ).grid(row=3, column=2, sticky="w", padx=(10, 0), pady=(8, 0))
+        ).grid(row=2, column=2, sticky="w", padx=(20, 0))
 
         self.cliente_vinculado_var = tk.StringVar(value="Cliente vinculado: nenhum")
         tk.Label(
