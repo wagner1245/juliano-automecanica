@@ -1688,7 +1688,7 @@ class ClientDialog(tk.Toplevel):
             ("NOME*", 1),
             ("TELEFONE", 2),
             ("PLACA", 3),
-            ("VEICULO", 4),
+            ("VEICULO", 4) ,
         ]
         for i, (label, idx) in enumerate(fields):
             tk.Label(self, text=label).grid(row=i, column=0, sticky="w", padx=10, pady=6)
