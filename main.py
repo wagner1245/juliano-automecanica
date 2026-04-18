@@ -911,6 +911,14 @@ class ServicesFrame(tk.Frame):
         self.nome_orcamento_var = tk.StringVar()
         self.veiculo_orcamento_var = tk.StringVar()
 
+        self.nome_orcamento_var.trace_add(
+             "write", lambda *args: self._maiusculo_var(self.nome_orcamento_var)
+        )
+
+        self.veiculo_orcamento_var.trace_add(
+            "write", lambda *args: self._maiusculo_var(self.veiculo_orcamento_var)
+        ) 
+
         tk.Label(
             campos_orcamento,
             text="Cliente novo (preencha abaixo):",
@@ -1075,6 +1083,12 @@ class ServicesFrame(tk.Frame):
         self.sugestoes.pack_forget()
         self.sugestoes.bind("<<ListboxSelect>>", self.selecionar_sugestao)
 
+    def _maiusculo_var(self, var):
+        texto = var.get()
+        texto_maiusculo = texto.upper()
+        if texto != texto_maiusculo:
+            var.set(texto_maiusculo)          
+
     def limpar_cliente(self):
         # limpa cliente novo
         self.nome_orcamento_var.set("")
@@ -1095,8 +1109,16 @@ class ServicesFrame(tk.Frame):
         self.orcamento_cliente_veiculo = ""
         self.orcamento_cliente_tipo = ""
 
+        # limpa ordem de serviço
+        for item in self.tree.get_children():
+         self.tree.delete(item)
+
+        # limpa mão de obra
+        self.mao_obra_var.set("") 
+
         # atualiza label
-        self.atualizar_label_cliente()     
+        self.atualizar_label_cliente()
+        self.atualizar_totais()     
 
     def atualizar_label_cliente(self):
         if self.orcamento_cliente_nome and self.orcamento_cliente_veiculo:
@@ -1291,6 +1313,10 @@ class ServicesFrame(tk.Frame):
 
     def _insert_manual(self, data):
         quantidade = float(data[0])
+
+        if quantidade.is_integer():
+           quantidade = int(quantidade)
+
         descricao = data[1]
         preco = float(data[2])
 
@@ -1312,6 +1338,10 @@ class ServicesFrame(tk.Frame):
 
     def _update_manual(self, item_id, sid, data):
         quantidade = float(data[0])
+
+        if quantidade.is_integer():
+           quantidade = int(quantidade)
+
         descricao = data[1]
         preco = float(data[2])
 
@@ -1722,12 +1752,15 @@ class ServiceDialog(tk.Toplevel):
         self.price = tk.StringVar()
 
         tk.Label(self, text="Quantidade*").grid(row=0, column=0, sticky="w", padx=10, pady=8)
-        tk.Entry(self, textvariable=self.quantity, width=15).grid(
-            row=0, column=1, sticky="w", padx=10, pady=8
-        )
+        self.entry_qtd = tk.Entry(self, textvariable=self.quantity, width=15)
+        self.entry_qtd.grid(row=0, column=1, sticky="w", padx=10, pady=8)
+        self.after(100, lambda: self.entry_qtd.focus())
 
         tk.Label(self, text="Descrição*").grid(row=1, column=0, sticky="w", padx=10, pady=8)
-        tk.Entry(self, textvariable=self.desc, width=45).grid(row=1, column=1, padx=10, pady=8)
+
+        self.entry_desc = tk.Entry(self, textvariable=self.desc, width=45)
+        self.entry_desc.grid(row=1, column=1, padx=10, pady=8)
+        self.entry_desc.bind("<KeyRelease>", self._maiusculo_descricao)
 
         tk.Label(self, text="Preço (R$)*").grid(row=2, column=0, sticky="w", padx=10, pady=8)
         tk.Entry(self, textvariable=self.price, width=15).grid(
@@ -1746,6 +1779,15 @@ class ServiceDialog(tk.Toplevel):
 
         self.grab_set()
         self.transient(parent)
+
+    def _maiusculo_descricao(self, event=None):
+        texto = self.desc.get()
+        pos = self.entry_desc.index("insert")
+
+        texto_maiusculo = texto.upper()
+        if texto != texto_maiusculo:
+            self.desc.set(texto_maiusculo)
+            self.entry_desc.icursor(pos)     
 
     def save(self):
         qtxt = self.quantity.get().strip().replace(",", ".")
@@ -1774,7 +1816,7 @@ class ServiceDialog(tk.Toplevel):
         # mantém a janela aberta
         self.quantity.set("1")
         self.desc.set("")
-        self.price.set("0,00")
+        self.price.set("")
 
         # foco no campo descrição para o próximo cadastro
         self.focus_set()
