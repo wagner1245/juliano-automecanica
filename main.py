@@ -343,14 +343,21 @@ class ClientsFrame(tk.Frame):
         self.cpf_var = tk.StringVar()
         self.cpf_var.trace_add("write", self._limitar_cpf)
         self.nome_var = tk.StringVar()
+        self.nome_var.trace_add("write", lambda *args: self._maiusculo_var(self.nome_var))
         self.cidade_var = tk.StringVar()
+        self.cidade_var.trace_add("write", lambda *args: self._maiusculo_var(self.cidade_var))
         self.endereco_var = tk.StringVar()
+        self.endereco_var.trace_add("write", lambda *args: self._maiusculo_var(self.endereco_var))
         self.placa_var = tk.StringVar()
+        self.placa_var.trace_add("write", lambda *args: self._maiusculo_var(self.placa_var))
         self.veiculo_var = tk.StringVar()
+        self.veiculo_var.trace_add("write", lambda *args: self._maiusculo_var(self.veiculo_var))
 
         self.telefone_var = tk.StringVar()
         self.cidade2_var = tk.StringVar()
+        self.cidade2_var.trace_add("write", lambda *args: self._maiusculo_var(self.cidade2_var))
         self.bairro_var = tk.StringVar()
+        self.bairro_var.trace_add("write", lambda *args: self._maiusculo_var(self.bairro_var))
         self.placa2_var = tk.StringVar()
         self.km_var = tk.StringVar()
         self.telefone_var.trace_add("write", self._limitar_telefone)
@@ -523,7 +530,13 @@ class ClientsFrame(tk.Frame):
        texto = self.telefone_var.get()
        texto = "".join(ch for ch in texto if ch.isdigit())[:11]
        if self.telefone_var.get() != texto:
-          self.telefone_var.set(texto)        
+          self.telefone_var.set(texto)
+
+    def _maiusculo_var(self, var):
+        texto = var.get()
+        texto_maiusculo = texto.upper()
+        if texto != texto_maiusculo:
+            var.set(texto_maiusculo)
 
     def buscar_clientes(self):
         termo_original = self.q_var.get().strip()
@@ -710,6 +723,13 @@ class EditClientDialog(tk.Toplevel):
 
         self.cpf_var.trace_add("write", self._limitar_cpf)
         self.telefone_var.trace_add("write", self._limitar_telefone)
+        self.nome_var.trace_add("write", lambda *args: self._maiusculo_var(self.nome_var))
+        self.cidade_var.trace_add("write", lambda *args: self._maiusculo_var(self.cidade_var))
+        self.endereco_var.trace_add("write", lambda *args: self._maiusculo_var(self.endereco_var))
+        self.placa_var.trace_add("write", lambda *args: self._maiusculo_var(self.placa_var))
+        self.veiculo_var.trace_add("write", lambda *args: self._maiusculo_var(self.veiculo_var))
+        self.cor_var.trace_add("write", lambda *args: self._maiusculo_var(self.cor_var))
+        self.bairro_var.trace_add("write", lambda *args: self._maiusculo_var(self.bairro_var))
 
         frame = tk.Frame(self, bg="#f5f6f8", padx=15, pady=15)
         frame.pack(fill="both", expand=True)
@@ -747,6 +767,12 @@ class EditClientDialog(tk.Toplevel):
         texto = "".join(ch for ch in self.telefone_var.get() if ch.isdigit())[:11]
         if self.telefone_var.get() != texto:
             self.telefone_var.set(texto)
+
+    def _maiusculo_var(self, var):
+        texto = var.get()
+        texto_maiusculo = texto.upper()
+        if texto != texto_maiusculo:
+            var.set(texto_maiusculo)
 
     def salvar(self):
         dados = {
