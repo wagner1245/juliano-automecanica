@@ -9,23 +9,22 @@ def init_db():
     con = db()
     cur = con.cursor()
 
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS clients(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    cpf TEXT,
-    name TEXT NOT NULL,
-    address TEXT,
-    district TEXT,
-    city TEXT,
-    phone TEXT,
-    vehicle TEXT,
-    mileage TEXT,
-    plate TEXT,
-    color TEXT,
-    year TEXT,
-    created_at TEXT NOT NULL
+    cur.execute(
+  """
+    CREATE TABLE IF NOT EXISTS orcamentos_enviados (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        cliente_nome TEXT,
+        telefone TEXT,
+        veiculo TEXT,
+        caminho_imagem TEXT,
+        mao_de_obra TEXT,
+        total_pecas TEXT,
+        total_servicos TEXT,
+        data_criacao TEXT,
+        status_envio TEXT
+    )
+    """
 )
-""")
     
     cur.execute("PRAGMA table_info(clients)")
     client_cols = [row[1] for row in cur.fetchall()]

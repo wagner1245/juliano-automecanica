@@ -8,9 +8,12 @@ Descrição: Sistema de gestão de oficina mecânica desenvolvido em Python com 
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk, messagebox, simpledialog
+import webbrowser
+import urllib.parse
 from datetime import datetime
 import os
+import tempfile
 
 from config import APP_TITLE, LOGO_PATH
 from database import db, init_db
@@ -97,8 +100,6 @@ class App(tk.Tk):
         self.sidebar.pack(side="left", fill="y")
         data_atual = datetime.now().strftime("%d/%m/%Y")
 
-        data_atual = datetime.now().strftime("%d/%m/%Y")
-
         tk.Label(
         self.sidebar,
         text=data_atual,
@@ -139,17 +140,6 @@ class App(tk.Tk):
         self.show("ServicesFrame")
         self.after(100, lambda: SplashScreen(self))
 
-    def open_maximized(self):
-        try:
-            self.state("zoomed")  # Windows
-        except Exception:
-            try:
-             
-               self.attributes("-zoomed", True)  # Linux / alguns ambientes
-            except Exception:
-             sw = self.winfo_screenwidth()
-            sh = self.winfo_screenheight()
-            self.geometry(f"{sw}x{sh}+0+0")
 
     def _build_sidebar_header(self):
         header = tk.Frame(self.sidebar, bg="#1c283a")
@@ -254,9 +244,6 @@ class DashboardFrame(tk.Frame):
             fg="#1f2a37",
             font=("Segoe UI", 18, "bold"),
         ).pack(anchor="w")
-        tiles = tk.Frame(self, bg="#f5f6f8")
-        tiles.pack(fill="x")
-
         self.recent_box = tk.LabelFrame(
             self,
             text="Ordens recentes (últimas 10)",
@@ -286,31 +273,6 @@ class DashboardFrame(tk.Frame):
             side="right"
         )
 
-    def _tile(self, parent, text, cmd, bg, hover):
-        f = tk.Frame(
-            parent,
-            bg="white",
-            bd=0,
-            highlightthickness=1,
-            highlightbackground="#e5e7eb",
-        )
-        f.configure(width=220, height=90)
-        f.pack_propagate(False)
-        b = tk.Button(
-            f,
-            text=text,
-            command=cmd,
-            bg=bg,
-            fg="white",
-            activebackground=hover,
-            activeforeground="white",
-            font=("Segoe UI", 12, "bold"),
-            bd=0,
-            relief="flat",
-            cursor="hand2",
-        )
-        b.pack(fill="both", expand=True, padx=8, pady=8)
-        return f
 
     def refresh(self):
         for i in self.tree.get_children():
@@ -861,15 +823,283 @@ class EditClientDialog(tk.Toplevel):
         messagebox.showinfo("Sucesso", "Cliente atualizado com sucesso.")
         self.destroy()
 
+class OrcamentoPreview(tk.Toplevel):
+    def __init__(
+        self,
+        parent,
+        caminho_imagem,
+        nome_cliente="",
+        telefone="",
+        veiculo="",
+        mao_de_obra="R$ 0,00",
+        total_pecas="R$ 0,00",
+        total_servicos="R$ 0,00",
+    ):
+        super().__init__(parent)
+
+        self.title("Pré-visualização do Orçamento")
+        self.geometry("900x700")
+        self.configure(bg="#f5f6f8")
+        self.transient(parent)
+        self.grab_set()
+
+        self.caminho_imagem = caminho_imagem
+        self.nome_cliente = nome_cliente
+        self.telefone = telefone
+        self.img_tk = None
+        self.veiculo = veiculo
+        self.mao_de_obra = mao_de_obra
+        self.total_pecas = total_pecas
+        self.total_servicos = total_servicos
+
+        self.update_idletasks()
+        largura = 900
+        altura = 700
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        x = (sw // 2) - (largura // 2)
+        y = (sh // 2) - (altura // 2)
+        self.geometry(f"{largura}x{altura}+{x}+{y}")
+
+        topo = tk.Frame(self, bg="#f5f6f8")
+        topo.pack(fill="x", padx=15, pady=(15, 10))
+
+        tk.Label(
+            topo,
+            text="Pré-visualização do Orçamento",
+            bg="#f5f6f8",
+            fg="#1f2a37",
+            font=("Segoe UI", 16, "bold"),
+        ).pack(side="left")
+
+        botoes = tk.Frame(self, bg="#f5f6f8")
+        botoes.pack(fill="x", padx=15, pady=(0, 10))
+
+        tk.Button(
+            botoes,
+            text="Enviar para Cliente",
+            bg="#16a34a",
+            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            padx=14,
+            pady=8,
+            bd=0,
+            command=self.enviar_para_cliente
+        ).pack(side="left", padx=(0, 10))
+
+        tk.Button(
+            botoes,
+            text="Imprimir",
+            bg="#2563eb",
+            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            padx=14,
+            pady=8,
+            bd=0,
+            command=self.imprimir_orcamento
+        ).pack(side="left", padx=(0, 10))
+
+        tk.Button(
+            botoes,
+            text="Fechar",
+            bg="#dc2626",
+            fg="white",
+            font=("Segoe UI", 10, "bold"),
+            padx=14,
+            pady=8,
+            bd=0,
+            command=self.destroy
+        ).pack(side="left")
+
+        frame_preview = tk.Frame(self, bg="#dbe1e8")
+        frame_preview.pack(fill="both", expand=True, padx=15, pady=(0, 15))
+
+        self.canvas = tk.Canvas(frame_preview, bg="#cfd6df", highlightthickness=0)
+        scrollbar_y = ttk.Scrollbar(frame_preview, orient="vertical", command=self.canvas.yview)
+
+        self.area_interna = tk.Frame(self.canvas, bg="#cfd6df")
+        self.area_interna.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all")),
+        )
+
+        self.canvas.create_window((0, 0), window=self.area_interna, anchor="nw")
+        self.canvas.configure(yscrollcommand=scrollbar_y.set)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        scrollbar_y.pack(side="right", fill="y")
+
+        self.mostrar_imagem()
+
+    def salvar_orcamento_enviado(self):
+        try:
+            con = db()
+            cur = con.cursor()
+
+            cur.execute(
+                """
+                INSERT INTO orcamentos_enviados (
+                    cliente_nome,
+                    telefone,
+                    veiculo,
+                    caminho_imagem,
+                    mao_de_obra,
+                    total_pecas,
+                    total_servicos,
+                    data_criacao,
+                    status_envio
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.nome_cliente,
+                    self.telefone,
+                    self.veiculo,
+                    self.caminho_imagem,
+                    self.mao_de_obra,
+                    self.total_pecas,
+                    self.total_servicos,
+                    datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                    "ENVIADO",
+                ),
+            )
+
+            con.commit()
+            con.close()
+            return True
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Não foi possível salvar o orçamento:\n{e}")
+            return False
+
+    def mostrar_imagem(self):
+        if not os.path.exists(self.caminho_imagem):
+            messagebox.showerror("Erro", "Imagem do orçamento não encontrada.")
+            return
+
+        img = Image.open(self.caminho_imagem)
+
+        largura_max = 760
+        proporcao = largura_max / img.width
+        nova_altura = int(img.height * proporcao)
+
+        img = img.resize((largura_max, nova_altura), Image.LANCZOS)
+
+        self.img_tk = ImageTk.PhotoImage(img)
+
+        lbl = tk.Label(self.area_interna, image=self.img_tk, bg="#cfd6df")
+        lbl.pack(pady=20)
+
+    def enviar_para_cliente(self):
+        telefone_base = str(self.telefone or "").strip()
+        telefone_limpo = "".join(ch for ch in telefone_base if ch.isdigit())
+
+        if not telefone_limpo:
+            telefone_digitado = simpledialog.askstring(
+                "Telefone do Cliente",
+                "Digite o telefone com WhatsApp (com DDD):",
+                parent=self
+            )
+
+            if not telefone_digitado:
+                return
+
+            telefone_limpo = "".join(ch for ch in telefone_digitado if ch.isdigit())
+
+            if len(telefone_limpo) < 10:
+                messagebox.showwarning(
+                    "Atenção",
+                    "Telefone inválido. Digite um número com DDD."
+                )
+                return
+
+            self.telefone = telefone_limpo
+
+        if len(telefone_limpo) == 11:
+            telefone_limpo = "55" + telefone_limpo
+        elif len(telefone_limpo) == 10:
+            telefone_limpo = "55" + telefone_limpo
+
+        if not self.salvar_orcamento_enviado():
+            return
+
+        mensagem = (
+            f"Olá {self.nome_cliente}!\n\n"
+            f"Segue seu orçamento da *Juliano Automecânica* 🔧\n\n"
+            f"Qualquer dúvida estou à disposição."
+        )
+
+        link = f"https://wa.me/{telefone_limpo}?text={urllib.parse.quote(mensagem)}"
+
+        try:
+            os.startfile(link)
+        except Exception:
+            try:
+                webbrowser.open(link)
+            except Exception as e:
+                messagebox.showerror("Erro", f"Não foi possível abrir o WhatsApp:\n{e}")
+                return
+
+    def imprimir_orcamento(self):
+        if not os.path.exists(self.caminho_imagem):
+            messagebox.showerror("Erro", "Imagem do orçamento não encontrada.")
+            return
+
+        try:
+            img = Image.open(self.caminho_imagem).convert("RGB")
+
+            # A4 em retrato com boa qualidade
+            a4_largura = 2480
+            a4_altura = 3508
+
+            # Página branca
+            pagina = Image.new("RGB", (a4_largura, a4_altura), "white")
+
+            # Margem menor para ocupar mais a folha
+            margem_lateral = 80
+            margem_superior = 80
+            margem_inferior = 80
+
+            area_largura = a4_largura - (margem_lateral * 2)
+            area_altura = a4_altura - margem_superior - margem_inferior
+
+            # Faz a imagem ocupar o máximo possível da área útil
+            proporcao_img = img.width / img.height
+            proporcao_area = area_largura / area_altura
+
+            if proporcao_img > proporcao_area:
+                nova_largura = area_largura
+                nova_altura = int(nova_largura / proporcao_img)
+            else:
+                nova_altura = area_altura
+                nova_largura = int(nova_altura * proporcao_img)
+
+            img = img.resize((nova_largura, nova_altura), Image.LANCZOS)
+
+            # Centraliza a imagem
+            x = (a4_largura - nova_largura) // 2
+            y = (a4_altura - nova_altura) // 2
+
+            pagina.paste(img, (x, y))
+
+            # PDF temporário
+            pasta_temp = tempfile.gettempdir()
+            caminho_pdf = os.path.join(pasta_temp, "orcamento_impressao_temp.pdf")
+            pagina.save(caminho_pdf, "PDF", resolution=300.0)
+
+            try:
+                os.startfile(caminho_pdf, "print")
+            except Exception:
+                os.startfile(caminho_pdf)
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Não foi possível preparar a impressão:\n{e}")
 
 class ServicesFrame(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg="#f5f6f8")
         self.app = app
         self.selected_client_id = None
-        self.selected_client_name = ""
-        self.selected_client_cpf = ""
-        self.selected_client_plate = ""
         self._resultados_busca = []
 
         # estado atual do orçamento
@@ -1020,7 +1250,6 @@ class ServicesFrame(tk.Frame):
         tk.Button(linha1, text="Editar", command=self.edit_dialog).pack(side="left", padx=5)
         tk.Button(linha1, text="Excluir", command=self.delete_selected).pack(side="left", padx=10)
         tk.Button(linha1, text="CriarOrçamento", command=self.criar_orcamento_imagem).pack(side="left", padx=5)
-        tk.Button(linha1, text="Imprimir").pack(side="left", padx=5)
 
         # ==============================
         # LINHA 2 (VALORES)
@@ -1096,9 +1325,6 @@ class ServicesFrame(tk.Frame):
 
         # limpa cliente existente
         self.selected_client_id = None
-        self.selected_client_name = ""
-        self.selected_client_cpf = ""
-        self.selected_client_plate = ""
 
         # limpa busca
         self.search_var.set("")
@@ -1216,10 +1442,6 @@ class ServicesFrame(tk.Frame):
         client_id, cpf, plate, name, vehicle = self._resultados_busca[indice]
 
         self.selected_client_id = client_id
-        self.selected_client_name = name or ""
-        self.selected_client_cpf = cpf or ""
-        self.selected_client_plate = plate or ""
-
         self.nome_orcamento_var.set(name or "")
         self.veiculo_orcamento_var.set(vehicle or "")
 
@@ -1503,14 +1725,27 @@ class ServicesFrame(tk.Frame):
 
             img.save(caminho_saida)
 
-            try:
-                os.startfile(caminho_saida)
-            except Exception:
-                pass
+            telefone_cliente = ""
 
-            messagebox.showinfo(
-                "Sucesso",
-                f"Orçamento criado com sucesso!\n\nImagem salva em:\n{caminho_saida}"
+            if self.orcamento_cliente_tipo == "existente" and self.selected_client_id:
+                con = db()
+                cur = con.cursor()
+                cur.execute("SELECT phone FROM clients WHERE id = ?", (self.selected_client_id,))
+                row = cur.fetchone()
+                con.close()
+
+                if row and row[0]:
+                    telefone_cliente = row[0]
+
+            OrcamentoPreview(
+                self,
+                caminho_imagem=caminho_saida,
+                nome_cliente=nome_cliente,
+                telefone=telefone_cliente,
+                veiculo=veiculo_cliente,
+                mao_de_obra=mao_de_obra_formatado,
+                total_pecas=total_pecas,
+                total_servicos=total_servicos,
             )
 
         except Exception as e:
