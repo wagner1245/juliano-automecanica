@@ -1,4 +1,4 @@
-# Juliano Automecânica Primeria versão
+# Juliano Automecânica Primeria versã
 
 Sistema de gestão para oficina mecânica desenvolvido em **Python**, com interface gráfica em **Tkinter** e banco de dados **SQLite**.
 
