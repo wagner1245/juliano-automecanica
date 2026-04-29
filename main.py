@@ -1900,8 +1900,17 @@ class ServicesFrame(tk.Frame):
             x_desc = 180
             x_valor = 800
 
-            draw.text((x_qtd, y), "QTD", fill="black", font=fonte_negrito)
-            draw.text((x_desc, y), "DESCRIÇÃO", fill="black", font=fonte_negrito)
+            # Centraliza o título DESCRIÇÃO entre QTD e VALOR
+            texto_desc = "DESCRIÇÃO"
+            bbox_desc = draw.textbbox((0, 0), texto_desc, font=fonte_negrito)
+            largura_desc = bbox_desc[2] - bbox_desc[0]
+
+            inicio_coluna_desc = 180
+            fim_coluna_desc = 760
+            x_desc_titulo = inicio_coluna_desc + ((fim_coluna_desc - inicio_coluna_desc - largura_desc) // 2)
+
+            draw.text((x_qtd, y), "QUANTIDADE", fill="black", font=fonte_negrito)
+            draw.text((x_desc_titulo, y), texto_desc, fill="black", font=fonte_negrito)
             draw.text((x_valor, y), "VALOR", fill="black", font=fonte_negrito)
             y += 35
 
