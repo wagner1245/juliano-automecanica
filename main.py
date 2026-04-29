@@ -333,6 +333,17 @@ class ClientsFrame(tk.Frame):
         self.endereco_var = tk.StringVar()
         self.bairro_var = tk.StringVar()
 
+        self.cpf_var.trace_add("write", self._limitar_cpf)
+        self.telefone_var.trace_add("write", self._limitar_telefone)
+
+        for var in (
+            self.nome_var,
+            self.cidade_var,
+            self.endereco_var,
+            self.bairro_var,
+      ):
+         var.trace_add("write", lambda *args, v=var: self._maiusculo_var(v))
+
         self._campo(form, "CPF:", self.cpf_var, 0, 0, width=27)
         self._campo(form, "Nome:", self.nome_var, 0, 1, width=38)
         self._campo(form, "Telefone:", self.telefone_var, 0, 2, width=27)
@@ -355,7 +366,7 @@ class ClientsFrame(tk.Frame):
             padx=16,
             pady=7,
             font=("Segoe UI", 10, "bold"),
-            command=self._acao_visual,
+            command=self.add_client,
         ).pack(side="left", padx=(0, 22))
 
         tk.Button(
@@ -511,6 +522,91 @@ class ClientsFrame(tk.Frame):
             relief="solid",
             bd=1,
         ).pack(fill="x", pady=(4, 0), ipady=4)
+
+    def _normalizar_cpf(self, valor):
+        return "".join(ch for ch in str(valor or "") if ch.isdigit())
+
+    def _coletar_dados_cliente(self):
+        return {
+            "cpf": self._normalizar_cpf(self.cpf_var.get().strip()),
+            "name": self.nome_var.get().strip(),
+            "phone": self.telefone_var.get().strip(),
+            "city": self.cidade_var.get().strip(),
+            "address": self.endereco_var.get().strip(),
+            "district": self.bairro_var.get().strip(),
+        }
+
+    def _limpar_campos_cliente(self):
+        self.cpf_var.set("")
+        self.nome_var.set("")
+        self.telefone_var.set("")
+        self.cidade_var.set("")
+        self.endereco_var.set("")
+        self.bairro_var.set("")
+
+    def _limitar_cpf(self, *args):
+        texto = "".join(ch for ch in self.cpf_var.get() if ch.isdigit())[:11]
+        if self.cpf_var.get() != texto:
+            self.cpf_var.set(texto)
+
+    def _limitar_telefone(self, *args):
+        texto = "".join(ch for ch in self.telefone_var.get() if ch.isdigit())[:11]
+        if self.telefone_var.get() != texto:
+            self.telefone_var.set(texto)
+
+    def _maiusculo_var(self, var):
+        texto = var.get()
+        texto_maiusculo = texto.upper()
+        if texto != texto_maiusculo:
+            var.set(texto_maiusculo)    
+
+    def add_client(self):
+        dados = self._coletar_dados_cliente()
+
+        if not dados["cpf"]:
+            messagebox.showwarning("Atenção", "Informe o CPF do cliente.")
+            return
+
+        if len(dados["cpf"]) != 11:
+            messagebox.showwarning("Atenção", "CPF deve conter 11 dígitos.")
+            return
+
+        if not dados["name"]:
+            messagebox.showwarning("Atenção", "Informe o nome do cliente.")
+            return
+
+        con = db()
+        cur = con.cursor()
+
+        cur.execute("SELECT id FROM clients WHERE cpf = ?", (dados["cpf"],))
+        if cur.fetchone():
+            con.close()
+            messagebox.showwarning("Atenção", "Este CPF já está cadastrado.")
+            return
+
+        cur.execute(
+            """
+            INSERT INTO clients (
+                cpf, name, phone, city, address, district, created_at
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                dados["cpf"],
+                dados["name"],
+                dados["phone"],
+                dados["city"],
+                dados["address"],
+                dados["district"],
+                datetime.now().isoformat(timespec="seconds"),
+            ),
+        )
+
+        con.commit()
+        con.close()
+
+        self._limpar_campos_cliente()
+        messagebox.showinfo("Sucesso", "Cliente cadastrado com sucesso.")
 
     def _acao_visual(self):
         messagebox.showinfo("Em breve", "Por enquanto esta tela é apenas visual.")
