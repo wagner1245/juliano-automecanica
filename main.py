@@ -300,414 +300,223 @@ class ClientsFrame(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg="#f5f6f8")
         self.app = app
-        self.selected_client_id = None
-        self._resultados_busca = []
 
-        top = tk.Frame(self, bg="#f5f6f8")
-        top.pack(fill="x")
+        main_card = tk.Frame(
+            self,
+            bg="white",
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+            width=900,
+            height=520
+        )
+        main_card.pack(anchor="w", padx=10, pady=(0, 14))
+        main_card.pack_propagate(False)
+
+        # =========================
+        # DADOS DO CLIENTE
+        # =========================
         tk.Label(
-            top,
-            text="Clientes",
-            bg="#f5f6f8",
-            fg="#1f2a37",
-            font=("Segoe UI", 18, "bold"),
+            main_card,
+            text="👤  DADOS DO CLIENTE",
+            bg="white",
+            fg="#0b63ce",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w", padx=22, pady=(16, 10))
+
+        form = tk.Frame(main_card, bg="white")
+        form.pack(fill="x", padx=22)
+
+        self.cpf_var = tk.StringVar()
+        self.nome_var = tk.StringVar()
+        self.telefone_var = tk.StringVar()
+        self.cidade_var = tk.StringVar()
+        self.endereco_var = tk.StringVar()
+        self.bairro_var = tk.StringVar()
+
+        self._campo(form, "CPF:", self.cpf_var, 0, 0, width=27)
+        self._campo(form, "Nome:", self.nome_var, 0, 1, width=38)
+        self._campo(form, "Telefone:", self.telefone_var, 0, 2, width=27)
+
+        self._campo(form, "Cidade:", self.cidade_var, 1, 0, width=27)
+        self._campo(form, "Endereço:", self.endereco_var, 1, 1, width=38)
+        self._campo(form, "Bairro:", self.bairro_var, 1, 2, width=27)
+
+        botoes_cliente = tk.Frame(main_card, bg="white")
+        botoes_cliente.pack(anchor="w", padx=22, pady=(2, 14))
+
+        tk.Button(
+            botoes_cliente,
+            text="▣  Adicionar Cliente",
+            bg="#0b63ce",
+            fg="white",
+            activebackground="#084ea3",
+            activeforeground="white",
+            bd=0,
+            padx=16,
+            pady=7,
+            font=("Segoe UI", 10, "bold"),
+            command=self._acao_visual,
+        ).pack(side="left", padx=(0, 22))
+
+        tk.Button(
+            botoes_cliente,
+            text="✎  Editar Cliente",
+            bg="white",
+            fg="#111827",
+            bd=1,
+            padx=16,
+            pady=6,
+            font=("Segoe UI", 10, "bold"),
+            command=self._acao_visual,
+        ).pack(side="left", padx=(0, 22))
+
+        tk.Button(
+            botoes_cliente,
+            text="🗑  Excluir Cliente",
+            bg="white",
+            fg="#111827",
+            bd=1,
+            padx=16,
+            pady=6,
+            font=("Segoe UI", 10, "bold"),
+            command=self._acao_visual,
         ).pack(side="left")
 
-        search = tk.Frame(self, bg="#f5f6f8")
-        search.pack(fill="x", pady=(10, 6))
-        tk.Label(search, text="Buscar:", bg="#f5f6f8").pack(side="left")
+        separador = tk.Frame(main_card, bg="#e5e7eb", height=1)
+        separador.pack(fill="x", padx=22, pady=(0, 12))
 
-        self.q_var = tk.StringVar()
-        self.q_var.trace_add("write", lambda *args: self.buscar_clientes())
-
-        self.q = tk.Entry(search, width=40, textvariable=self.q_var)
-        self.q.pack(side="left", padx=8)
-        
-        tk.Button(search, text="Limpar", command=self._clear).pack(side="left", padx=6)
-
-        self.sugestoes = tk.Listbox(self, height=5, font=("Segoe UI", 10))
-        self.sugestoes.bind("<<ListboxSelect>>", self.selecionar_sugestao)
-        self.sugestoes.pack(fill="x", padx=15, pady=(0, 6))
-        self.sugestoes.pack_forget()
-
-        # FICHA DO CLIENTE
-        container = tk.Frame(self, bg="#edeef0")
-        container.pack(fill="x", padx=15, pady=(12, 0))
-        ficha = tk.Frame(container, bg="#edeef0")
-        ficha.pack(fill="x", padx=1, pady=1)
-
-        ficha_interna = tk.Frame(ficha, bg="#eef1f5")
-        ficha_interna.pack(fill="x", padx=12, pady=12)
-
-        # Variáveis dos campos
-        self.cpf_var = tk.StringVar()
-        self.cpf_var.trace_add("write", self._limitar_cpf)
-        self.nome_var = tk.StringVar()
-        self.nome_var.trace_add("write", lambda *args: self._maiusculo_var(self.nome_var))
-        self.cidade_var = tk.StringVar()
-        self.cidade_var.trace_add("write", lambda *args: self._maiusculo_var(self.cidade_var))
-        self.endereco_var = tk.StringVar()
-        self.endereco_var.trace_add("write", lambda *args: self._maiusculo_var(self.endereco_var))
-        self.placa_var = tk.StringVar()
-        self.placa_var.trace_add("write", lambda *args: self._maiusculo_var(self.placa_var))
-        self.veiculo_var = tk.StringVar()
-        self.veiculo_var.trace_add("write", lambda *args: self._maiusculo_var(self.veiculo_var))
-
-        self.telefone_var = tk.StringVar()
-        self.cidade2_var = tk.StringVar()
-        self.cidade2_var.trace_add("write", lambda *args: self._maiusculo_var(self.cidade2_var))
-        self.bairro_var = tk.StringVar()
-        self.bairro_var.trace_add("write", lambda *args: self._maiusculo_var(self.bairro_var))
-        self.placa2_var = tk.StringVar()
-        self.km_var = tk.StringVar()
-        self.telefone_var.trace_add("write", self._limitar_telefone)
-
-        campo_visual = {
-           "bg": "#f5f6f8",
-           "anchor": "w",
-           "font": ("Segoe UI", 10),
-           "width": 32,
-        }
-
-        # Coluna esquerda
-        col_esq = tk.Frame(ficha_interna, bg="#f5f6f8")
-        col_esq.pack(side="left", fill="both", expand=True, padx=(0, 20))
-
-        tk.Label(col_esq, text="CPF:", bg="#f5f6f8", anchor="w").grid(row=0, column=0, sticky="w", pady=6)
-        tk.Label(col_esq, textvariable=self.cpf_var, **campo_visual).grid(row=0, column=1, sticky="w", pady=6)
-
-        tk.Label(col_esq, text="Nome:", bg="#f5f6f8", anchor="w").grid(row=1, column=0, sticky="w", pady=6)
-        tk.Label(col_esq, textvariable=self.nome_var, **campo_visual).grid(row=1, column=1, sticky="w", pady=6)
-
-        tk.Label(col_esq, text="Cidade:", bg="#f5f6f8", anchor="w").grid(row=2, column=0, sticky="w", pady=6)
-        tk.Label(col_esq, textvariable=self.cidade_var, **campo_visual).grid(row=2, column=1, sticky="w", pady=6)
-
-        tk.Label(col_esq, text="Endereço:", bg="#f5f6f8", anchor="w").grid(row=3, column=0, sticky="w", pady=6)
-        tk.Label(col_esq, textvariable=self.endereco_var, **campo_visual).grid(row=3, column=1, sticky="w", pady=6)
-
-        tk.Label(col_esq, text="Placa:", bg="#f5f6f8", anchor="w").grid(row=4, column=0, sticky="w", pady=6)
-        tk.Label(col_esq, textvariable=self.placa_var, **campo_visual).grid(row=4, column=1, sticky="w", pady=6)
-
-        tk.Label(col_esq, text="Veículo:", bg="#f5f6f8", anchor="w").grid(row=5, column=0, sticky="w", pady=6)
-        tk.Label(col_esq, textvariable=self.veiculo_var, **campo_visual).grid(row=5, column=1, sticky="w", pady=6)
-
-        # Coluna direita
-        col_dir = tk.Frame(ficha_interna, bg="#f5f6f8")
-        col_dir.pack(side="left", fill="both", expand=True)
-
-        tk.Label(col_dir, text="Telefone:", bg="#f5f6f8", anchor="w").grid(row=0, column=0, sticky="w", pady=6)
-        tk.Label(col_dir, textvariable=self.telefone_var, **campo_visual).grid(row=0, column=1, sticky="w", pady=6)
-
-        tk.Label(col_dir, text="COR:", bg="#f5f6f8", anchor="w").grid(row=1, column=0, sticky="w", pady=6)
-        tk.Label(col_dir, textvariable=self.cidade2_var, **campo_visual).grid(row=1, column=1, sticky="w", pady=6)
-
-        tk.Label(col_dir, text="Bairro:", bg="#f5f6f8", anchor="w").grid(row=2, column=0, sticky="w", pady=6)
-        tk.Label(col_dir, textvariable=self.bairro_var, **campo_visual).grid(row=2, column=1, sticky="w", pady=6)
-
-        tk.Label(col_dir, text="ANO:", bg="#f5f6f8", anchor="w").grid(row=3, column=0, sticky="w", pady=6)
-        tk.Label(col_dir, textvariable=self.placa2_var, **campo_visual).grid(row=3, column=1, sticky="w", pady=6)
-
-        tk.Label(col_dir, text="Quilometragem:", bg="#f5f6f8", anchor="w").grid(row=4, column=0, sticky="w", pady=6)
-        tk.Label(col_dir, textvariable=self.km_var, **campo_visual).grid(row=4, column=1, sticky="w", pady=6)
-
-        tk.Label(col_dir, text="ORÇADO POR:", bg="#f5f6f8", anchor="w").grid(row=5, column=0, sticky="w", pady=6)
+        # =========================
+        # VEÍCULOS DO CLIENTE
+        # =========================
         tk.Label(
-            col_dir,
-            text="Juliano",
-            bg="#f5f6f8",
-            anchor="w",
+            main_card,
+            text="🚗  VEÍCULOS DO CLIENTE",
+            bg="white",
+            fg="#0b63ce",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w", padx=22, pady=(0, 10))
+
+        style = ttk.Style()
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+
+        style.configure(
+            "ClientesVeiculos.Treeview",
+            background="white",
+            foreground="#111827",
+            fieldbackground="white",
+            rowheight=30,
+            bordercolor="#d1d5db",
+            borderwidth=1,
+            font=("Segoe UI", 10),
+        )
+        style.configure(
+            "ClientesVeiculos.Treeview.Heading",
+            background="#f3f4f6",
+            foreground="#111827",
             font=("Segoe UI", 10, "bold"),
-            fg="#2c3e50",
-            width=32,
-        ).grid(row=5, column=1, sticky="w", pady=6)
-
-        actions = tk.Frame(self, bg="#f5f6f8")
-        actions.pack(fill="x", pady=(10, 0))
-        btn_container = tk.Frame(actions, bg="#f5f6f8")
-        btn_container.pack()
-        tk.Button(btn_container, text="Adicionar", command=self.open_add_dialog).pack(side="left", padx=10)
-        tk.Button(btn_container, text="Editar", command=self.open_edit_dialog).pack(side="left", padx=10)
-        tk.Button(btn_container, text="Excluir", command=self.delete_selected).pack(side="left", padx=10)
-
-    def open_add_dialog(self):
-        AddClientDialog(self)
-
-    def open_edit_dialog(self):
-        cid = self._selected_id()
-        if not cid:
-              messagebox.showwarning("Atenção", "Selecione um cliente na busca primeiro.")
-              return
-
-        con = db()
-        cur = con.cursor()
-        cur.execute(
-            """
-            SELECT cpf, name, city, address, plate, vehicle, phone,
-                   color, district, year, mileage
-            FROM clients
-            WHERE id=?
-            """,
-            (cid,),
         )
-        row = cur.fetchone()
-        con.close()
 
-        if not row:
-            messagebox.showwarning("Atenção", "Cliente não encontrado.")
-            return
+        tabela_frame = tk.Frame(main_card, bg="white")
+        tabela_frame.pack(fill="x", padx=22)
 
-        EditClientDialog(self, cid, row)
-
-    def _selected_id(self):
-        return self.selected_client_id
-
-    def _limpar_campos(self):
-        for var in (
-            self.cpf_var,
-            self.nome_var,
-            self.cidade_var,
-            self.endereco_var,
-            self.placa_var,
-            self.veiculo_var,
-            self.telefone_var,
-            self.cidade2_var,
-            self.bairro_var,
-            self.placa2_var,
-            self.km_var,
-        ):
-            var.set("")
-
-    def _coletar_dados(self):
-          return {
-        "cpf": self.cpf_var.get().strip(),
-        "name": self.nome_var.get().strip(),
-        "city": self.cidade_var.get().strip(),
-        "address": self.endereco_var.get().strip(),
-        "plate": self.placa_var.get().strip().upper(),
-        "vehicle": self.veiculo_var.get().strip(),
-        "phone": self.telefone_var.get().strip(),
-        "color": self.cidade2_var.get().strip(),
-        "district": self.bairro_var.get().strip(),
-        "year": self.placa2_var.get().strip(),
-        "mileage": self.km_var.get().strip(),
-    }
-
-    def _preencher_campos(self, row):
-         cpf, name, city, address, plate, vehicle, phone, color, district, year, mileage = row
-
-         self.cpf_var.set(cpf or "")
-         self.nome_var.set(name or "")
-         self.cidade_var.set(city or "")
-         self.endereco_var.set(address or "")
-         self.placa_var.set(plate or "")
-         self.veiculo_var.set(vehicle or "")
-         self.telefone_var.set(phone or "")
-         self.cidade2_var.set(color or "")
-         self.bairro_var.set(district or "")
-         self.placa2_var.set(year or "")
-         self.km_var.set(mileage or "")
-
-    def _carregar_cliente_por_id(self, client_id):
-        con = db()
-        cur = con.cursor()
-        cur.execute(
-            """
-             SELECT cpf, name, city, address, plate, vehicle, phone,
-               color, district, year, mileage
-              FROM clients
-              WHERE id=?
-           """,
-            (client_id,),
+        cols = ("placa", "veiculo", "cor", "ano", "km")
+        self.veiculos_tree = ttk.Treeview(
+            tabela_frame,
+            columns=cols,
+            show="headings",
+            height=4,
+            style="ClientesVeiculos.Treeview"
         )
-        row = cur.fetchone()
-        con.close()
 
-        if not row:
-            self.selected_client_id = None
-            self._limpar_campos()
-            return False
+        colunas = [
+            ("placa", "Placa", 130),
+            ("veiculo", "Veículo", 190),
+            ("cor", "Cor", 120),
+            ("ano", "Ano", 100),
+            ("km", "Quilometragem", 160),
+        ]
 
-        self.selected_client_id = client_id
-        self._preencher_campos(row)
-        return True
+        for col, titulo, largura in colunas:
+            self.veiculos_tree.heading(col, text=titulo, anchor="w")
+            self.veiculos_tree.column(col, width=largura, anchor="w")
 
-    def _limitar_cpf(self, *args):
-        texto = self.cpf_var.get()
-        texto = "".join(ch for ch in texto if ch.isdigit())[:11]
-        if self.cpf_var.get() != texto:
-            self.cpf_var.set(texto)
+        self.veiculos_tree.pack(fill="x")
 
-    def _limitar_telefone(self, *args):
-       texto = self.telefone_var.get()
-       texto = "".join(ch for ch in texto if ch.isdigit())[:11]
-       if self.telefone_var.get() != texto:
-          self.telefone_var.set(texto)
+        # Dados fictícios apenas para visual
+        self.veiculos_tree.insert("", "end", values=("ABC-1234", "Honda Civic", "Preto", "2018", "85.000 km"))
+        self.veiculos_tree.insert("", "end", values=("XYZ-9876", "Fiat Uno", "Branco", "2012", "120.000 km"))
+        self.veiculos_tree.insert("", "end", values=("DEF-4567", "Chevrolet Onix", "Prata", "2021", "32.000 km"))
 
-    def _maiusculo_var(self, var):
-        texto = var.get()
-        texto_maiusculo = texto.upper()
-        if texto != texto_maiusculo:
-            var.set(texto_maiusculo)
+        botoes_veiculo = tk.Frame(main_card, bg="white")
+        botoes_veiculo.pack(anchor="w", padx=22, pady=(12, 0))
 
-    def buscar_clientes(self):
-        termo_original = self.q_var.get().strip()
-        termo_maiusculo = termo_original.upper()
-        termo_cpf = "".join(ch for ch in termo_original if ch.isdigit())
+        tk.Button(
+            botoes_veiculo,
+            text="+  Adicionar Veículo",
+            bg="#08803a",
+            fg="white",
+            activebackground="#06632d",
+            activeforeground="white",
+            bd=0,
+            padx=16,
+            pady=7,
+            font=("Segoe UI", 10, "bold"),
+            command=self._acao_visual,
+        ).pack(side="left", padx=(0, 22))
 
-        self.sugestoes.delete(0, tk.END)
-        self._resultados_busca = []
+        tk.Button(
+            botoes_veiculo,
+            text="✎  Editar Veículo",
+            bg="white",
+            fg="#111827",
+            bd=1,
+            padx=16,
+            pady=6,
+            font=("Segoe UI", 10, "bold"),
+            command=self._acao_visual,
+        ).pack(side="left", padx=(0, 22))
 
-        if not termo_original:
-            self.sugestoes.pack_forget()
-            return
+        tk.Button(
+            botoes_veiculo,
+            text="🗑  Excluir Veículo",
+            bg="white",
+            fg="#111827",
+            bd=1,
+            padx=16,
+            pady=6,
+            font=("Segoe UI", 10, "bold"),
+            command=self._acao_visual,
+        ).pack(side="left")
 
-        con = db()
-        cur = con.cursor()
-        cur.execute(
-            """
-            SELECT id, cpf, plate, name, vehicle
-            FROM clients
-            WHERE
-                REPLACE(REPLACE(REPLACE(COALESCE(cpf, ''), '.', ''), '-', ''), '/', '') LIKE ?
-                OR UPPER(COALESCE(name, '')) LIKE ?
-                OR UPPER(COALESCE(plate, '')) LIKE ?
-            ORDER BY name
-            LIMIT 10
-            """,
-            (
-                f"{termo_cpf}%" if termo_cpf else "",
-                f"{termo_maiusculo}%",
-                f"{termo_maiusculo}%",
-            ),
-        )
-        resultados = cur.fetchall()
-        con.close()
+    def _campo(self, parent, label, var, row, col, width=30):
+        box = tk.Frame(parent, bg="white")
+        box.grid(row=row, column=col, sticky="w", padx=(0, 28), pady=(0, 14))
 
-        if not resultados:
-            self.sugestoes.pack_forget()
-            return
+        tk.Label(
+            box,
+            text=label,
+            bg="white",
+            fg="#111827",
+            font=("Segoe UI", 10),
+        ).pack(anchor="w")
 
-        self._resultados_busca = resultados
-        for client_id, cpf, plate, name, vehicle in resultados:
-            texto = (
-                f"CPF: {cpf or '-'} | PLACA: {plate or '-'} | "
-                f"NOME: {name or '-'} | VEÍCULO: {vehicle or '-'}"
-            )
-            self.sugestoes.insert(tk.END, texto)
+        tk.Entry(
+            box,
+            textvariable=var,
+            width=width,
+            font=("Segoe UI", 10),
+            relief="solid",
+            bd=1,
+        ).pack(fill="x", pady=(4, 0), ipady=4)
 
-        self.sugestoes.pack(fill="x", padx=15, pady=(0, 6))
-
-    def selecionar_sugestao(self, event=None):
-        selecao = self.sugestoes.curselection()
-        if not selecao:
-            return
-
-        indice = selecao[0]
-        if indice >= len(self._resultados_busca):
-            return
-
-        client_id, _cpf, _plate, _name, _vehicle = self._resultados_busca[indice]
-        self._carregar_cliente_por_id(client_id)
-
-        self.q_var.set("")
-        self.sugestoes.pack_forget()
-
-    def _clear(self):
-        self.q_var.set("")
-        self.selected_client_id = None
-        self._resultados_busca = []
-        self.sugestoes.delete(0, tk.END)
-        self.sugestoes.pack_forget()
-        self._limpar_campos()
-
-    def _normalizar_cpf(self, valor):
-        return "".join(ch for ch in str(valor or "") if ch.isdigit())
-
-    def _normalizar_placa(self, valor):
-        return "".join(ch for ch in str(valor or "").upper() if ch.isalnum())
-
-    def add_client(self):
-        dados = self._coletar_dados()
-
-        if not dados["cpf"] or not dados["name"]:
-            messagebox.showwarning("Atenção", "CPF e Nome são obrigatórios!")
-            return
-
-        cpf_normalizado = self._normalizar_cpf(dados["cpf"])
-        placa_normalizada = self._normalizar_placa(dados["plate"])
-
-        con = db()
-        cur = con.cursor()
-
-        if cpf_normalizado:
-            cur.execute("SELECT cpf FROM clients")
-            for (cpf_existente,) in cur.fetchall():
-                if self._normalizar_cpf(cpf_existente) == cpf_normalizado:
-                    con.close()
-                    messagebox.showwarning("Atenção", "Este CPF já está cadastrado.")
-                    return
-
-        if placa_normalizada:
-            cur.execute("SELECT plate FROM clients")
-            for (placa_existente,) in cur.fetchall():
-                if self._normalizar_placa(placa_existente) == placa_normalizada:
-                    con.close()
-                    messagebox.showwarning("Atenção", "Esta PLACA já está cadastrada.")
-                    return
-
-        cur.execute(
-            """
-            INSERT INTO clients (
-                cpf, name, city, address, plate, vehicle,
-                phone, color, district, year, mileage, created_at
-            )
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                cpf_normalizado or dados["cpf"].strip(),
-                dados["name"],
-                dados["city"],
-                dados["address"],
-                placa_normalizada or dados["plate"].strip().upper(),
-                dados["vehicle"],
-                dados["phone"],
-                dados["color"],
-                dados["district"],
-                dados["year"],
-                dados["mileage"],
-                datetime.now().isoformat(timespec="seconds"),
-            ),
-        )
-        con.commit()
-        new_id = cur.lastrowid
-        con.close()
-
-        self._carregar_cliente_por_id(new_id)
-        self.q_var.set("")
-        self.sugestoes.delete(0, tk.END)
-        self.sugestoes.pack_forget()
-        messagebox.showinfo("Sucesso", "Cliente cadastrado com sucesso.")
-
-    def delete_selected(self):
-        cid = self._selected_id()
-        if not cid:
-            messagebox.showwarning("Atenção", "Selecione um cliente na busca primeiro.")
-            return
-        if not messagebox.askyesno("Confirmar", "Excluir este cliente?"):
-            return
-
-        con = db()
-        cur = con.cursor()
-        cur.execute("DELETE FROM clients WHERE id=?", (cid,))
-        con.commit()
-        con.close()
-        self._clear()
+    def _acao_visual(self):
+        messagebox.showinfo("Em breve", "Por enquanto esta tela é apenas visual.")
 
     def refresh(self):
-        if self.selected_client_id:
-            self._carregar_cliente_por_id(self.selected_client_id)
-        else:
-            self.sugestoes.pack_forget()
+        pass
 
 class AddClientDialog(tk.Toplevel):
     def __init__(self, parent):
