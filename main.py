@@ -372,8 +372,8 @@ class ClientsFrame(tk.Frame):
         tk.Button(
             botoes_cliente,
             text="✎  Editar Cliente",
-            bg="white",
-            fg="#111827",
+            bg="#ffc107",
+            fg="black",
             bd=1,
             padx=16,
             pady=6,
@@ -384,7 +384,7 @@ class ClientsFrame(tk.Frame):
         tk.Button(
             botoes_cliente,
             text="🗑  Excluir Cliente",
-            bg="white",
+            bg="#f33346",
             fg="#111827",
             bd=1,
             padx=16,
@@ -481,8 +481,8 @@ class ClientsFrame(tk.Frame):
         tk.Button(
             botoes_veiculo,
             text="✎  Editar Veículo",
-            bg="white",
-            fg="#111827",
+            bg="#ffc107",
+            fg="black",
             bd=1,
             padx=16,
             pady=6,
@@ -493,9 +493,7 @@ class ClientsFrame(tk.Frame):
         tk.Button(
             botoes_veiculo,
             text="🗑  Excluir Veículo",
-            bg="white",
-            fg="#111827",
-            bd=1,
+            bg="#f33346",
             padx=16,
             pady=6,
             font=("Segoe UI", 10, "bold"),
