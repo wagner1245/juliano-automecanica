@@ -378,7 +378,7 @@ class ClientsFrame(tk.Frame):
             padx=16,
             pady=6,
             font=("Segoe UI", 10, "bold"),
-            command=self._acao_visual,
+            command=self.open_edit_client_search,
         ).pack(side="left", padx=(0, 22))
 
         tk.Button(
@@ -390,7 +390,7 @@ class ClientsFrame(tk.Frame):
             padx=16,
             pady=6,
             font=("Segoe UI", 10, "bold"),
-            command=self._acao_visual,
+            command=self.open_delete_client_search,
         ).pack(side="left")
 
         separador = tk.Frame(main_card, bg="#e5e7eb", height=1)
@@ -608,11 +608,389 @@ class ClientsFrame(tk.Frame):
         self._limpar_campos_cliente()
         messagebox.showinfo("Sucesso", "Cliente cadastrado com sucesso.")
 
+    def open_edit_client_search(self):
+        EditClientSearchDialog(self)
+
+    def open_delete_client_search(self):
+        DeleteClientSearchDialog(self)
+
     def _acao_visual(self):
         messagebox.showinfo("Em breve", "Por enquanto esta tela é apenas visual.")
 
     def refresh(self):
         pass
+
+class EditClientSearchDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+
+        self.title("Buscar Cliente")
+        self.geometry("380x190")
+        self.resizable(False, False)
+        self.configure(bg="#f5f6f8")
+        self.grab_set()
+
+        frame = tk.Frame(self, bg="#f5f6f8", padx=22, pady=20)
+        frame.pack(fill="both", expand=True)
+
+        tk.Label(
+            frame,
+            text="Digite CPF ou Telefone do Cliente:",
+            bg="#f5f6f8",
+            fg="#111827",
+            font=("Segoe UI", 10, "bold")
+        ).pack(pady=(0, 10))
+
+        self.search_var = tk.StringVar()
+        self.search_var.trace_add("write", self._limitar_busca)
+
+        self.search_entry = tk.Entry(
+            frame,
+            textvariable=self.search_var,
+            width=30,
+            font=("Segoe UI", 10),
+            justify="center"
+        )
+        self.search_entry.pack(pady=(0, 12), ipady=3)
+        self.search_entry.focus_set()
+
+        tk.Button(
+            frame,
+            text="Buscar",
+            command=self.buscar_cliente
+        ).pack()
+
+        self.bind("<Return>", lambda event: self.buscar_cliente())
+
+        self.update_idletasks()
+        largura = self.winfo_width()
+        altura = self.winfo_height()
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        x = (sw // 2) - (largura // 2)
+        y = (sh // 2) - (altura // 2)
+        self.geometry(f"+{x}+{y}")
+
+    def _limitar_busca(self, *args):
+        texto = "".join(ch for ch in self.search_var.get() if ch.isdigit())[:11]
+        if self.search_var.get() != texto:
+            self.search_var.set(texto)
+
+    def buscar_cliente(self):
+        valor = "".join(ch for ch in self.search_var.get().strip() if ch.isdigit())
+
+        if not valor:
+            messagebox.showwarning("Atenção", "Digite CPF ou Telefone.")
+            return
+
+        con = db()
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT id, cpf, name, phone, city, address, district
+            FROM clients
+            WHERE cpf = ? OR phone = ?
+            """,
+            (valor, valor)
+        )
+        cliente = cur.fetchone()
+        con.close()
+
+        if not cliente:
+            messagebox.showwarning("Atenção", "Cliente não encontrado.")
+            return
+
+        self.destroy()
+        EditClientDataDialog(self.parent, cliente)
+
+
+class EditClientDataDialog(tk.Toplevel):
+    def __init__(self, parent, cliente):
+        super().__init__(parent)
+        self.parent = parent
+        self.cliente_id = cliente[0]
+
+        self.title("Editar Cliente")
+        self.geometry("480x370")
+        self.resizable(False, False)
+        self.configure(bg="#f5f6f8")
+        self.grab_set()
+
+        self.cpf_var = tk.StringVar(value=cliente[1] or "")
+        self.nome_var = tk.StringVar(value=cliente[2] or "")
+        self.telefone_var = tk.StringVar(value=cliente[3] or "")
+        self.cidade_var = tk.StringVar(value=cliente[4] or "")
+        self.endereco_var = tk.StringVar(value=cliente[5] or "")
+        self.bairro_var = tk.StringVar(value=cliente[6] or "")
+
+        self.cpf_var.trace_add("write", self._limitar_cpf)
+        self.telefone_var.trace_add("write", self._limitar_telefone)
+
+        for var in (
+            self.nome_var,
+            self.cidade_var,
+            self.endereco_var,
+            self.bairro_var,
+        ):
+            var.trace_add("write", lambda *args, v=var: self._maiusculo_var(v))
+
+        frame = tk.Frame(self, bg="#f5f6f8", padx=20, pady=18)
+        frame.pack(fill="both", expand=True)
+
+        tk.Label(
+            frame,
+            text="Editar dados do cliente",
+            bg="#f5f6f8",
+            fg="#0f172a",
+            font=("Segoe UI", 13, "bold")
+        ).grid(row=0, column=0, columnspan=2, pady=(0, 12))
+
+        campos = [
+            ("CPF:", self.cpf_var),
+            ("Nome:", self.nome_var),
+            ("Telefone:", self.telefone_var),
+            ("Cidade:", self.cidade_var),
+            ("Endereço:", self.endereco_var),
+            ("Bairro:", self.bairro_var),
+        ]
+
+        for i, (label, var) in enumerate(campos, start=1):
+            tk.Label(
+                frame,
+                text=label,
+                bg="#f5f6f8",
+                font=("Segoe UI", 10, "bold")
+            ).grid(row=i, column=0, sticky="w", pady=6)
+
+            tk.Entry(
+                frame,
+                textvariable=var,
+                width=38,
+                font=("Segoe UI", 10)
+            ).grid(row=i, column=1, padx=(12, 0), pady=6, ipady=3)
+
+        botoes = tk.Frame(frame, bg="#f5f6f8")
+        botoes.grid(row=len(campos) + 1, column=0, columnspan=2, pady=(18, 0))
+
+        tk.Button(
+            botoes,
+            text="Salvar Alterações",
+            bg="#0b63ce",
+            fg="white",
+            activebackground="#084ea3",
+            activeforeground="white",
+            font=("Segoe UI", 10, "bold"),
+            padx=14,
+            pady=7,
+            bd=0,
+            command=self.salvar_alteracoes
+        ).pack(side="left", padx=6)
+
+        tk.Button(
+            botoes,
+            text="Cancelar",
+            command=self.destroy
+        ).pack(side="left", padx=6)
+
+        self.update_idletasks()
+        largura = self.winfo_width()
+        altura = self.winfo_height()
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        x = (sw // 2) - (largura // 2)
+        y = (sh // 2) - (altura // 2)
+        self.geometry(f"+{x}+{y}")
+
+    def _limitar_cpf(self, *args):
+        texto = "".join(ch for ch in self.cpf_var.get() if ch.isdigit())[:11]
+        if self.cpf_var.get() != texto:
+            self.cpf_var.set(texto)
+
+    def _limitar_telefone(self, *args):
+        texto = "".join(ch for ch in self.telefone_var.get() if ch.isdigit())[:11]
+        if self.telefone_var.get() != texto:
+            self.telefone_var.set(texto)
+
+    def _maiusculo_var(self, var):
+        texto = var.get()
+        texto_maiusculo = texto.upper()
+        if texto != texto_maiusculo:
+            var.set(texto_maiusculo)
+
+    def salvar_alteracoes(self):
+        cpf = "".join(ch for ch in self.cpf_var.get().strip() if ch.isdigit())
+        nome = self.nome_var.get().strip()
+        telefone = "".join(ch for ch in self.telefone_var.get().strip() if ch.isdigit())
+        cidade = self.cidade_var.get().strip()
+        endereco = self.endereco_var.get().strip()
+        bairro = self.bairro_var.get().strip()
+
+        if not cpf:
+            messagebox.showwarning("Atenção", "Informe o CPF.")
+            return
+
+        if len(cpf) != 11:
+            messagebox.showwarning("Atenção", "CPF deve conter 11 dígitos.")
+            return
+
+        if telefone and len(telefone) != 11:
+            messagebox.showwarning("Atenção", "Telefone deve conter 11 dígitos.")
+            return
+
+        if not nome:
+            messagebox.showwarning("Atenção", "Informe o nome.")
+            return
+
+        con = db()
+        cur = con.cursor()
+
+        cur.execute(
+            "SELECT id FROM clients WHERE cpf = ? AND id <> ?",
+            (cpf, self.cliente_id)
+        )
+        if cur.fetchone():
+            con.close()
+            messagebox.showwarning("Atenção", "Este CPF já pertence a outro cliente.")
+            return
+
+        if telefone:
+            cur.execute(
+                "SELECT id FROM clients WHERE phone = ? AND id <> ?",
+                (telefone, self.cliente_id)
+            )
+            if cur.fetchone():
+                con.close()
+                messagebox.showwarning("Atenção", "Este telefone já pertence a outro cliente.")
+                return
+
+        cur.execute(
+            """
+            UPDATE clients
+            SET cpf = ?, name = ?, phone = ?, city = ?, address = ?, district = ?
+            WHERE id = ?
+            """,
+            (
+                cpf,
+                nome,
+                telefone,
+                cidade,
+                endereco,
+                bairro,
+                self.cliente_id,
+            )
+        )
+
+        con.commit()
+        con.close()
+
+        messagebox.showinfo("Sucesso", "Cliente atualizado com sucesso.")
+        self.destroy()
+
+
+class DeleteClientSearchDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+
+        self.title("Excluir Cliente")
+        self.geometry("380x200")
+        self.resizable(False, False)
+        self.configure(bg="#f5f6f8")
+        self.grab_set()
+
+        frame = tk.Frame(self, bg="#f5f6f8", padx=22, pady=20)
+        frame.pack(fill="both", expand=True)
+
+        tk.Label(
+            frame,
+            text="Digite CPF ou Telefone do Cliente:",
+            bg="#f5f6f8",
+            fg="#111827",
+            font=("Segoe UI", 10, "bold")
+        ).pack(pady=(0, 10))
+
+        self.search_var = tk.StringVar()
+        self.search_var.trace_add("write", self._limitar_busca)
+
+        self.search_entry = tk.Entry(
+            frame,
+            textvariable=self.search_var,
+            width=30,
+            font=("Segoe UI", 10),
+            justify="center"
+        )
+        self.search_entry.pack(pady=(0, 12), ipady=3)
+        self.search_entry.focus_set()
+
+        tk.Button(
+            frame,
+            text="Buscar",
+            command=self.buscar_cliente
+        ).pack()
+
+        self.bind("<Return>", lambda event: self.buscar_cliente())
+
+        self.update_idletasks()
+        largura = self.winfo_width()
+        altura = self.winfo_height()
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        x = (sw // 2) - (largura // 2)
+        y = (sh // 2) - (altura // 2)
+        self.geometry(f"+{x}+{y}")
+
+    def _limitar_busca(self, *args):
+        texto = "".join(ch for ch in self.search_var.get() if ch.isdigit())[:11]
+        if self.search_var.get() != texto:
+            self.search_var.set(texto)
+
+    def buscar_cliente(self):
+        valor = "".join(ch for ch in self.search_var.get().strip() if ch.isdigit())
+
+        if not valor:
+            messagebox.showwarning("Atenção", "Digite CPF ou Telefone.")
+            return
+
+        con = db()
+        cur = con.cursor()
+        cur.execute(
+            """
+            SELECT id, cpf, name, phone, city, address, district
+            FROM clients
+            WHERE cpf = ? OR phone = ?
+            """,
+            (valor, valor)
+        )
+        cliente = cur.fetchone()
+        con.close()
+
+        if not cliente:
+            messagebox.showwarning("Atenção", "Cliente não encontrado.")
+            return
+
+        cliente_id, cpf, nome, telefone, cidade, endereco, bairro = cliente
+
+        confirmar = messagebox.askyesno(
+            "Confirmar exclusão",
+            "Deseja realmente excluir este cliente?\n\n"
+            f"Nome: {nome or '-'}\n"
+            f"CPF: {cpf or '-'}\n"
+            f"Telefone: {telefone or '-'}"
+        )
+
+        if not confirmar:
+            return
+
+        con = db()
+        cur = con.cursor()
+        cur.execute("DELETE FROM clients WHERE id = ?", (cliente_id,))
+        con.commit()
+        con.close()
+
+        messagebox.showinfo("Sucesso", "Cliente excluído com sucesso.")
+        self.destroy()
+
 
 class AddClientDialog(tk.Toplevel):
     def __init__(self, parent):
