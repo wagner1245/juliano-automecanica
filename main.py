@@ -580,7 +580,15 @@ class ClientsFrame(tk.Frame):
         if cur.fetchone():
             con.close()
             messagebox.showwarning("Atenção", "Este CPF já está cadastrado.")
+        
             return
+        
+        if dados["phone"]:
+           cur.execute("SELECT id FROM clients WHERE phone = ?", (dados["phone"],))
+        if cur.fetchone():
+           con.close()
+           messagebox.showwarning("Atenção", "Este telefone já está cadastrado.")
+           return
 
         cur.execute(
             """
