@@ -460,6 +460,7 @@ class ClientsFrame(tk.Frame):
         self.veiculos_tree.insert("", "end", values=("ABC-1234", "Honda Civic", "Preto", "2018", "85.000 km"))
         self.veiculos_tree.insert("", "end", values=("XYZ-9876", "Fiat Uno", "Branco", "2012", "120.000 km"))
         self.veiculos_tree.insert("", "end", values=("DEF-4567", "Chevrolet Onix", "Prata", "2021", "32.000 km"))
+        self.veiculos_tree.bind("<Double-1>", self.editar_celula_veiculo)
 
         botoes_veiculo = tk.Frame(main_card, bg="white")
         botoes_veiculo.pack(anchor="w", padx=22, pady=(12, 0))
@@ -499,6 +500,37 @@ class ClientsFrame(tk.Frame):
             font=("Segoe UI", 10, "bold"),
             command=self._acao_visual,
         ).pack(side="left")
+
+    def editar_celula_veiculo(self, event):
+        item = self.veiculos_tree.identify_row(event.y)
+        coluna = self.veiculos_tree.identify_column(event.x)
+
+        if not item or not coluna:
+            return
+
+        x, y, largura, altura = self.veiculos_tree.bbox(item, coluna)
+
+        valores = list(self.veiculos_tree.item(item, "values"))
+
+        indice_coluna = int(coluna.replace("#", "")) - 1
+        valor_atual = valores[indice_coluna]
+
+        entrada = tk.Entry(self.veiculos_tree)
+        entrada.place(x=x, y=y, width=largura, height=altura)
+        entrada.insert(0, valor_atual)
+        entrada.focus_set()
+        entrada.select_range(0, tk.END)
+
+    def salvar_edicao(event=None):
+        novo_valor = entrada.get().strip().upper()
+
+        valores[indice_coluna] = novo_valor
+        self.veiculos_tree.item(item, values=valores)
+
+        entrada.destroy()
+
+        entrada.bind("<Return>", salvar_edicao)
+        entrada.bind("<FocusOut>", salvar_edicao)
 
     def _campo(self, parent, label, var, row, col, width=30):
         box = tk.Frame(parent, bg="white")
