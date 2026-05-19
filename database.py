@@ -153,6 +153,20 @@ def init_db():
     )
     """)
 
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS vehicles(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    client_id INTEGER NOT NULL,
+    plate TEXT,
+    vehicle TEXT,
+    color TEXT,
+    year TEXT,
+    mileage TEXT,
+    created_at TEXT,
+    FOREIGN KEY(client_id) REFERENCES clients(id)
+   )
+    """)
+
     # Tabela de orçamentos enviados
     cur.execute("""
     CREATE TABLE IF NOT EXISTS orcamentos_enviados (

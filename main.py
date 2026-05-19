@@ -352,47 +352,6 @@ class ClientsFrame(tk.Frame):
         self._campo(form, "Endereço:", self.endereco_var, 1, 1, width=38)
         self._campo(form, "Bairro:", self.bairro_var, 1, 2, width=27)
 
-        botoes_cliente = tk.Frame(main_card, bg="white")
-        botoes_cliente.pack(anchor="w", padx=22, pady=(2, 14))
-
-        tk.Button(
-            botoes_cliente,
-            text="▣  Adicionar Cliente",
-            bg="#0b63ce",
-            fg="white",
-            activebackground="#084ea3",
-            activeforeground="white",
-            bd=0,
-            padx=16,
-            pady=7,
-            font=("Segoe UI", 10, "bold"),
-            command=self.add_client,
-        ).pack(side="left", padx=(0, 22))
-
-        tk.Button(
-            botoes_cliente,
-            text="✎  Editar Cliente",
-            bg="#ffc107",
-            fg="black",
-            bd=1,
-            padx=16,
-            pady=6,
-            font=("Segoe UI", 10, "bold"),
-            command=self.open_edit_client_search,
-        ).pack(side="left", padx=(0, 22))
-
-        tk.Button(
-            botoes_cliente,
-            text="🗑  Excluir Cliente",
-            bg="#f33346",
-            fg="#111827",
-            bd=1,
-            padx=16,
-            pady=6,
-            font=("Segoe UI", 10, "bold"),
-            command=self.open_delete_client_search,
-        ).pack(side="left")
-
         separador = tk.Frame(main_card, bg="#e5e7eb", height=1)
         separador.pack(fill="x", padx=22, pady=(0, 12))
 
@@ -456,10 +415,8 @@ class ClientsFrame(tk.Frame):
 
         self.veiculos_tree.pack(fill="x")
 
-        # Dados fictícios apenas para visual
-        self.veiculos_tree.insert("", "end", values=("ABC-1234", "Honda Civic", "Preto", "2018", "85.000 km"))
-        self.veiculos_tree.insert("", "end", values=("XYZ-9876", "Fiat Uno", "Branco", "2012", "120.000 km"))
-        self.veiculos_tree.insert("", "end", values=("DEF-4567", "Chevrolet Onix", "Prata", "2021", "32.000 km"))
+        # Linhas em branco para digitar os veículos direto na tabela
+        self._limpar_tabela_veiculos()
         self.veiculos_tree.bind("<Double-1>", self.editar_celula_veiculo)
 
         botoes_veiculo = tk.Frame(main_card, bg="white")
@@ -467,7 +424,7 @@ class ClientsFrame(tk.Frame):
 
         tk.Button(
             botoes_veiculo,
-            text="+  Adicionar Veículo",
+            text="▣  Adicionar Cliente",
             bg="#08803a",
             fg="white",
             activebackground="#06632d",
@@ -476,30 +433,37 @@ class ClientsFrame(tk.Frame):
             padx=16,
             pady=7,
             font=("Segoe UI", 10, "bold"),
-            command=self._acao_visual,
+            command=self.add_client,
         ).pack(side="left", padx=(0, 22))
 
         tk.Button(
             botoes_veiculo,
-            text="✎  Editar Veículo",
+            text="✎  Editar Cliente",
             bg="#ffc107",
             fg="black",
             bd=1,
             padx=16,
             pady=6,
             font=("Segoe UI", 10, "bold"),
-            command=self._acao_visual,
+            command=self.open_edit_client_search,
         ).pack(side="left", padx=(0, 22))
 
         tk.Button(
             botoes_veiculo,
-            text="🗑  Excluir Veículo",
+            text="🗑  Excluir Cliente",
             bg="#f33346",
             padx=16,
             pady=6,
             font=("Segoe UI", 10, "bold"),
-            command=self._acao_visual,
+            command=self.open_delete_client_search,
         ).pack(side="left")
+
+    def _limpar_tabela_veiculos(self):
+        for item in self.veiculos_tree.get_children():
+            self.veiculos_tree.delete(item)
+
+        for _ in range(3):
+            self.veiculos_tree.insert("", "end", values=("", "", "", "", ""))
 
     def editar_celula_veiculo(self, event):
         item = self.veiculos_tree.identify_row(event.y)
@@ -508,11 +472,17 @@ class ClientsFrame(tk.Frame):
         if not item or not coluna:
             return
 
-        x, y, largura, altura = self.veiculos_tree.bbox(item, coluna)
+        bbox = self.veiculos_tree.bbox(item, coluna)
+        if not bbox:
+            return
 
+        x, y, largura, altura = bbox
         valores = list(self.veiculos_tree.item(item, "values"))
 
         indice_coluna = int(coluna.replace("#", "")) - 1
+        if indice_coluna < 0 or indice_coluna >= len(valores):
+            return
+
         valor_atual = valores[indice_coluna]
 
         entrada = tk.Entry(self.veiculos_tree)
@@ -521,13 +491,14 @@ class ClientsFrame(tk.Frame):
         entrada.focus_set()
         entrada.select_range(0, tk.END)
 
-    def salvar_edicao(event=None):
-        novo_valor = entrada.get().strip().upper()
+        def salvar_edicao(event=None):
+            if not entrada.winfo_exists():
+                return
 
-        valores[indice_coluna] = novo_valor
-        self.veiculos_tree.item(item, values=valores)
-
-        entrada.destroy()
+            novo_valor = entrada.get().strip().upper()
+            valores[indice_coluna] = novo_valor
+            self.veiculos_tree.item(item, values=valores)
+            entrada.destroy()
 
         entrada.bind("<Return>", salvar_edicao)
         entrada.bind("<FocusOut>", salvar_edicao)
@@ -605,6 +576,26 @@ class ClientsFrame(tk.Frame):
             messagebox.showwarning("Atenção", "Informe o nome do cliente.")
             return
 
+        veiculos_para_salvar = []
+        for item in self.veiculos_tree.get_children():
+            valores = self.veiculos_tree.item(item, "values")
+
+            placa = str(valores[0]).strip().upper() if len(valores) > 0 else ""
+            veiculo = str(valores[1]).strip().upper() if len(valores) > 1 else ""
+            cor = str(valores[2]).strip().upper() if len(valores) > 2 else ""
+            ano = str(valores[3]).strip() if len(valores) > 3 else ""
+            km = str(valores[4]).strip() if len(valores) > 4 else ""
+
+            if placa or veiculo or cor or ano or km:
+                veiculos_para_salvar.append((placa, veiculo, cor, ano, km))
+
+        if not veiculos_para_salvar:
+            messagebox.showwarning(
+                "Atenção",
+                "Informe pelo menos um veículo na tabela antes de adicionar o cliente."
+            )
+            return
+
         con = db()
         cur = con.cursor()
 
@@ -612,39 +603,74 @@ class ClientsFrame(tk.Frame):
         if cur.fetchone():
             con.close()
             messagebox.showwarning("Atenção", "Este CPF já está cadastrado.")
-        
             return
-        
+
         if dados["phone"]:
-           cur.execute("SELECT id FROM clients WHERE phone = ?", (dados["phone"],))
-        if cur.fetchone():
-           con.close()
-           messagebox.showwarning("Atenção", "Este telefone já está cadastrado.")
-           return
+            cur.execute("SELECT id FROM clients WHERE phone = ?", (dados["phone"],))
+            if cur.fetchone():
+                con.close()
+                messagebox.showwarning("Atenção", "Este telefone já está cadastrado.")
+                return
 
-        cur.execute(
-            """
-            INSERT INTO clients (
-                cpf, name, phone, city, address, district, created_at
+        try:
+            cur.execute(
+                """
+                INSERT INTO clients (
+                    cpf, name, phone, city, address, district, created_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    dados["cpf"],
+                    dados["name"],
+                    dados["phone"],
+                    dados["city"],
+                    dados["address"],
+                    dados["district"],
+                    datetime.now().isoformat(timespec="seconds"),
+                ),
             )
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """,
-            (
-                dados["cpf"],
-                dados["name"],
-                dados["phone"],
-                dados["city"],
-                dados["address"],
-                dados["district"],
-                datetime.now().isoformat(timespec="seconds"),
-            ),
-        )
 
-        con.commit()
-        con.close()
+            cliente_id = cur.lastrowid
+
+            for placa, veiculo, cor, ano, km in veiculos_para_salvar:
+                cur.execute(
+                    """
+                    INSERT INTO vehicles (
+                        client_id,
+                        plate,
+                        vehicle,
+                        color,
+                        year,
+                        mileage,
+                        created_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        cliente_id,
+                        placa,
+                        veiculo,
+                        cor,
+                        ano,
+                        km,
+                        datetime.now().isoformat(timespec="seconds"),
+                    ),
+                )
+
+            con.commit()
+
+        except Exception as e:
+            con.rollback()
+            messagebox.showerror("Erro", f"Não foi possível salvar o cliente e veículo:\n{e}")
+            return
+
+        finally:
+            con.close()
 
         self._limpar_campos_cliente()
-        messagebox.showinfo("Sucesso", "Cliente cadastrado com sucesso.")
+        self._limpar_tabela_veiculos()
+        messagebox.showinfo("Sucesso", "Cliente e veículo cadastrados com sucesso.")
 
     def open_edit_client_search(self):
         EditClientSearchDialog(self)
