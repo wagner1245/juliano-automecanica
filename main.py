@@ -1225,7 +1225,7 @@ class EditClientSearchDialog(tk.Toplevel):
 
         tk.Label(
             frame,
-            text="Digite CPF ou Telefone do Cliente:",
+            text="Digite Placa ou Telefone do Cliente:",
             bg="#f5f6f8",
             fg="#111827",
             font=("Segoe UI", 10, "bold")
@@ -1493,7 +1493,7 @@ class DeleteClientSearchDialog(tk.Toplevel):
 
         tk.Label(
             frame,
-            text="Digite CPF ou Telefone do Cliente:",
+            text="Digite Placa ou Telefone do Cliente:",
             bg="#f5f6f8",
             fg="#111827",
             font=("Segoe UI", 10, "bold")
@@ -1515,6 +1515,14 @@ class DeleteClientSearchDialog(tk.Toplevel):
         tk.Button(
             frame,
             text="Buscar",
+            bg="#0b63ce",
+            fg="white",
+            activebackground="#084ea3",
+            activeforeground="white",
+            bd=0,
+            padx=18,
+            pady=7,
+            font=("Segoe UI", 10, "bold"),
             command=self.buscar_cliente
         ).pack()
 
@@ -1530,26 +1538,33 @@ class DeleteClientSearchDialog(tk.Toplevel):
         self.geometry(f"+{x}+{y}")
 
     def _limitar_busca(self, *args):
-        texto = "".join(ch for ch in self.search_var.get() if ch.isdigit())[:11]
+        texto = "".join(ch for ch in self.search_var.get().upper() if ch.isalnum())[:11]
+
         if self.search_var.get() != texto:
             self.search_var.set(texto)
 
     def buscar_cliente(self):
-        valor = "".join(ch for ch in self.search_var.get().strip() if ch.isdigit())
+        valor_original = self.search_var.get().strip().upper()
+        valor_telefone = "".join(ch for ch in valor_original if ch.isdigit())
+        valor_placa = "".join(ch for ch in valor_original if ch.isalnum())
 
-        if not valor:
-            messagebox.showwarning("Atenção", "Digite CPF ou Telefone.")
+        if not valor_original:
+            messagebox.showwarning("Atenção", "Digite a placa ou telefone do cliente.")
             return
 
         con = db()
         cur = con.cursor()
         cur.execute(
             """
-            SELECT id, cpf, name, phone, city, address, district
-            FROM clients
-            WHERE cpf = ? OR phone = ?
+            SELECT DISTINCT c.id, c.cpf, c.name, c.phone, c.city, c.address, c.district
+            FROM clients c
+            LEFT JOIN vehicles v ON v.client_id = c.id
+            WHERE c.phone = ?
+               OR UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) = ?
+            ORDER BY c.name
+            LIMIT 1
             """,
-            (valor, valor)
+            (valor_telefone, valor_placa)
         )
         cliente = cur.fetchone()
         con.close()
