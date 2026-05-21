@@ -304,6 +304,7 @@ class ClientsFrame(tk.Frame):
         self.dados_originais_cliente = None
         self.veiculos_originais = []
         self._editor_veiculo = None
+        self.veiculos_ids = {}
 
         main_card = tk.Frame(
             self,
@@ -396,7 +397,7 @@ class ClientsFrame(tk.Frame):
         tabela_frame = tk.Frame(main_card, bg="white")
         tabela_frame.pack(fill="x", padx=22)
 
-        cols = ("placa", "veiculo", "cor", "ano", "km")
+        cols = ("placa", "veiculo", "cor", "ano", "km", "acao")
         self.veiculos_tree = ttk.Treeview(
             tabela_frame,
             columns=cols,
@@ -411,16 +412,18 @@ class ClientsFrame(tk.Frame):
             ("cor", "Cor", 120),
             ("ano", "Ano", 100),
             ("km", "Quilometragem", 160),
+            ("acao", "", 55),
         ]
 
         for col, titulo, largura in colunas:
-            self.veiculos_tree.heading(col, text=titulo, anchor="w")
-            self.veiculos_tree.column(col, width=largura, anchor="w")
+            self.veiculos_tree.heading(col, text=titulo, anchor="center" if col == "acao" else "w")
+            self.veiculos_tree.column(col, width=largura, anchor="center" if col == "acao" else "w", stretch=False if col == "acao" else True)
 
         self.veiculos_tree.pack(fill="x")
 
         self._limpar_tabela_veiculos()
         self.veiculos_tree.bind("<Double-1>", self.editar_celula_veiculo)
+        self.veiculos_tree.bind("<ButtonRelease-1>", self.excluir_veiculo_da_tabela)
 
         botoes_veiculo = tk.Frame(main_card, bg="white")
         botoes_veiculo.pack(anchor="w", padx=22, pady=(12, 0))
@@ -490,11 +493,72 @@ class ClientsFrame(tk.Frame):
         ).pack(side="left")
 
     def _limpar_tabela_veiculos(self):
+        self.veiculos_ids = {}
+
         for item in self.veiculos_tree.get_children():
             self.veiculos_tree.delete(item)
 
         for _ in range(3):
-            self.veiculos_tree.insert("", "end", values=("", "", "", "", ""))
+            self.veiculos_tree.insert("", "end", values=("", "", "", "", "", ""))
+
+    def _linha_veiculo_tem_dados(self, valores):
+        valores = list(valores)
+        dados = valores[:5]
+        return any(str(valor).strip() for valor in dados)
+
+    def _garantir_linhas_vazias_veiculos(self):
+        while len(self.veiculos_tree.get_children()) < 3:
+            self.veiculos_tree.insert("", "end", values=("", "", "", "", "", ""))
+
+    def excluir_veiculo_da_tabela(self, event):
+        item = self.veiculos_tree.identify_row(event.y)
+        coluna = self.veiculos_tree.identify_column(event.x)
+
+        # A coluna #6 é a coluna da lixeira.
+        if not item or coluna != "#6":
+            return
+
+        valores = list(self.veiculos_tree.item(item, "values"))
+
+        if not self._linha_veiculo_tem_dados(valores):
+            return
+
+        placa = str(valores[0]).strip() if len(valores) > 0 else ""
+        veiculo = str(valores[1]).strip() if len(valores) > 1 else ""
+        veiculo_id = self.veiculos_ids.get(item)
+
+        confirmar = messagebox.askyesno(
+            "Confirmar exclusão",
+            "Deseja realmente excluir este veículo?\n\n"
+            f"Placa: {placa or '-'}\n"
+            f"Veículo: {veiculo or '-'}"
+        )
+
+        if not confirmar:
+            return
+
+        # Se o veículo já existe no banco, exclui definitivamente.
+        # Se for uma linha nova ainda não salva, remove apenas da tela.
+        if veiculo_id:
+            try:
+                con = db()
+                cur = con.cursor()
+                cur.execute(
+                    "DELETE FROM vehicles WHERE id = ? AND client_id = ?",
+                    (veiculo_id, self.cliente_carregado_id),
+                )
+                con.commit()
+                con.close()
+            except Exception as e:
+                messagebox.showerror(
+                    "Erro",
+                    f"Não foi possível excluir o veículo do banco de dados:\n{e}"
+                )
+                return
+
+        self.veiculos_ids.pop(item, None)
+        self.veiculos_tree.delete(item)
+        self._garantir_linhas_vazias_veiculos()
 
     def editar_celula_veiculo(self, event):
         item = self.veiculos_tree.identify_row(event.y)
@@ -514,6 +578,11 @@ class ClientsFrame(tk.Frame):
         valores = list(self.veiculos_tree.item(item, "values"))
 
         indice_coluna = int(coluna.replace("#", "")) - 1
+
+        # A última coluna é apenas a ação de excluir, não deve ser editada.
+        if indice_coluna == 5:
+            return
+
         if indice_coluna < 0 or indice_coluna >= len(valores):
             return
 
@@ -547,10 +616,20 @@ class ClientsFrame(tk.Frame):
             return
 
         valores = list(self.veiculos_tree.item(item, "values"))
+
+        while len(valores) < 6:
+            valores.append("")
+
         novo_valor = entrada.get().strip().upper()
 
-        if indice_coluna is not None and 0 <= indice_coluna < len(valores):
+        if indice_coluna is not None and 0 <= indice_coluna < 5:
             valores[indice_coluna] = novo_valor
+
+            if self._linha_veiculo_tem_dados(valores):
+                valores[5] = "🗑"
+            else:
+                valores[5] = ""
+
             self.veiculos_tree.item(item, values=valores)
 
         entrada.destroy()
@@ -868,7 +947,7 @@ class ClientsFrame(tk.Frame):
 
         cur.execute(
             """
-            SELECT plate, vehicle, color, year, mileage
+            SELECT id, plate, vehicle, color, year, mileage
             FROM vehicles
             WHERE client_id = ?
             ORDER BY id
@@ -893,15 +972,20 @@ class ClientsFrame(tk.Frame):
         self.endereco_var.set(cliente[4] or "")
         self.bairro_var.set(cliente[5] or "")
 
+        self.veiculos_ids = {}
+
         for item in self.veiculos_tree.get_children():
             self.veiculos_tree.delete(item)
 
         for veiculo in veiculos:
-            self.veiculos_tree.insert("", "end", values=veiculo)
+            veiculo_id = veiculo[0]
+            dados_veiculo = veiculo[1:]
+            item = self.veiculos_tree.insert("", "end", values=(*dados_veiculo, "🗑"))
+            self.veiculos_ids[item] = veiculo_id
 
         linhas_vazias = max(0, 3 - len(veiculos))
         for _ in range(linhas_vazias):
-            self.veiculos_tree.insert("", "end", values=("", "", "", "", ""))
+            self.veiculos_tree.insert("", "end", values=("", "", "", "", "", ""))
 
         self.cliente_carregado_id = cliente_id
         self.dados_originais_cliente = {
@@ -914,11 +998,11 @@ class ClientsFrame(tk.Frame):
         }
         self.veiculos_originais = [
             (
-                str(v[0] or "").strip().upper(),
                 str(v[1] or "").strip().upper(),
                 str(v[2] or "").strip().upper(),
-                str(v[3] or "").strip(),
+                str(v[3] or "").strip().upper(),
                 str(v[4] or "").strip(),
+                str(v[5] or "").strip(),
             )
             for v in veiculos
         ]
