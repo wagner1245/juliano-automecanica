@@ -3,7 +3,7 @@
 Sistema: Juliano Automecânica
 Versão: 1.0
 Desenvolvido por: Wagnerdev
-Ano: 2026
+Ano: 2026.
 Descrição: Sistema de gestão de oficina mecânica desenvolvido em Python com Tkinter e SQLite.
 """
 
