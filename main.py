@@ -419,7 +419,15 @@ class ClientsFrame(tk.Frame):
             self.veiculos_tree.heading(col, text=titulo, anchor="center" if col == "acao" else "w")
             self.veiculos_tree.column(col, width=largura, anchor="center" if col == "acao" else "w", stretch=False if col == "acao" else True)
 
-        self.veiculos_tree.pack(fill="x")
+        scrollbar_veiculos = ttk.Scrollbar(
+            tabela_frame,
+            orient="vertical",
+            command=self.veiculos_tree.yview,
+        )
+        self.veiculos_tree.configure(yscrollcommand=scrollbar_veiculos.set)
+
+        self.veiculos_tree.pack(side="left", fill="x", expand=True)
+        scrollbar_veiculos.pack(side="right", fill="y")
 
         self._limpar_tabela_veiculos()
         self.veiculos_tree.bind("<Double-1>", self.editar_celula_veiculo)
@@ -498,16 +506,27 @@ class ClientsFrame(tk.Frame):
         for item in self.veiculos_tree.get_children():
             self.veiculos_tree.delete(item)
 
-        for _ in range(3):
-            self.veiculos_tree.insert("", "end", values=("", "", "", "", "", ""))
+        self.veiculos_tree.insert("", "end", values=("", "", "", "", "", ""))
 
     def _linha_veiculo_tem_dados(self, valores):
         valores = list(valores)
         dados = valores[:5]
         return any(str(valor).strip() for valor in dados)
 
-    def _garantir_linhas_vazias_veiculos(self):
-        while len(self.veiculos_tree.get_children()) < 3:
+    def _garantir_linha_vazia_veiculo(self):
+        tem_linha_vazia = False
+
+        for item in self.veiculos_tree.get_children():
+            valores = list(self.veiculos_tree.item(item, "values"))
+
+            while len(valores) < 6:
+                valores.append("")
+
+            if not self._linha_veiculo_tem_dados(valores):
+                tem_linha_vazia = True
+                break
+
+        if not tem_linha_vazia:
             self.veiculos_tree.insert("", "end", values=("", "", "", "", "", ""))
 
     def excluir_veiculo_da_tabela(self, event):
@@ -558,7 +577,7 @@ class ClientsFrame(tk.Frame):
 
         self.veiculos_ids.pop(item, None)
         self.veiculos_tree.delete(item)
-        self._garantir_linhas_vazias_veiculos()
+        self._garantir_linha_vazia_veiculo()
 
     def editar_celula_veiculo(self, event):
         item = self.veiculos_tree.identify_row(event.y)
@@ -659,6 +678,8 @@ class ClientsFrame(tk.Frame):
                 valores[5] = ""
 
             self.veiculos_tree.item(item, values=valores)
+
+        self._garantir_linha_vazia_veiculo()
 
         entrada.destroy()
         self._editor_veiculo = None
@@ -1028,9 +1049,7 @@ class ClientsFrame(tk.Frame):
             item = self.veiculos_tree.insert("", "end", values=(*dados_veiculo, "🗑"))
             self.veiculos_ids[item] = veiculo_id
 
-        linhas_vazias = max(0, 3 - len(veiculos))
-        for _ in range(linhas_vazias):
-            self.veiculos_tree.insert("", "end", values=("", "", "", "", "", ""))
+        self._garantir_linha_vazia_veiculo()
 
         self.cliente_carregado_id = cliente_id
         self.dados_originais_cliente = {
