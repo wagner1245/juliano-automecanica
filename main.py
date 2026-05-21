@@ -621,6 +621,26 @@ class ClientsFrame(tk.Frame):
                     entrada.icursor(tk.END)
 
             entrada_var.trace_add("write", normalizar_placa_ao_digitar)
+
+        elif indice_coluna in (1, 2):
+            ajustando_texto = {"ativo": False}
+
+            def deixar_maiusculo_ao_digitar(*args):
+                if ajustando_texto["ativo"]:
+                    return
+
+                texto_atual = entrada_var.get()
+                texto_maiusculo = texto_atual.upper()
+
+                if texto_atual != texto_maiusculo:
+                    posicao_cursor = entrada.index(tk.INSERT)
+                    ajustando_texto["ativo"] = True
+                    entrada_var.set(texto_maiusculo)
+                    ajustando_texto["ativo"] = False
+                    entrada.icursor(posicao_cursor)
+
+            entrada_var.trace_add("write", deixar_maiusculo_ao_digitar)
+
         entrada.place(x=x, y=y, width=largura, height=altura)
         entrada.focus_set()
         entrada.select_range(0, tk.END)
