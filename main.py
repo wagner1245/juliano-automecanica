@@ -3,7 +3,7 @@
 Sistema: Juliano Automecânica
 Versão: 1.0
 Desenvolvido por: Wagnerdev
-Ano: 2026.
+Ano: 2026
 Descrição: Sistema de gestão de oficina mecânica desenvolvido em Python com Tkinter e SQLite.
 """
 
@@ -948,7 +948,7 @@ class SearchClientDialog(tk.Toplevel):
 
         tk.Label(
             frame,
-            text="Digite Nome do Cliente ou Telefone ou CPF:",
+            text="Buscar Cliente por Placa ou Telefone:",
             bg="#f5f6f8",
             fg="#111827",
             font=("Segoe UI", 10, "bold")
@@ -994,10 +994,10 @@ class SearchClientDialog(tk.Toplevel):
     def buscar_cliente(self):
         valor_original = self.search_var.get().strip()
         valor_numerico = "".join(ch for ch in valor_original if ch.isdigit())
-        valor_nome = valor_original.upper()
+        valor_placa = "".join(ch for ch in valor_original.upper() if ch.isalnum())
 
         if not valor_original:
-            messagebox.showwarning("Atenção", "Digite CPF, telefone ou nome.")
+            messagebox.showwarning("Atenção", "Digite a placa ou telefone do cliente.")
             return
 
         con = db()
@@ -1005,20 +1005,19 @@ class SearchClientDialog(tk.Toplevel):
 
         cur.execute(
             """
-            SELECT id
-            FROM clients
-            WHERE cpf = ?
-               OR phone = ?
-               OR UPPER(name) LIKE ?
-            ORDER BY name
+            SELECT DISTINCT c.id
+            FROM clients c
+            LEFT JOIN vehicles v ON v.client_id = c.id
+            WHERE c.phone = ?
+               OR UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) = ?
+            ORDER BY c.name
             LIMIT 1
             """,
             (
                 valor_numerico,
-                valor_numerico,
-                f"%{valor_nome}%"
-             )
-         )
+                valor_placa,
+            )
+        )
 
         cliente = cur.fetchone()
         con.close()
