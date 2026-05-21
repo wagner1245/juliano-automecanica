@@ -466,18 +466,6 @@ class ClientsFrame(tk.Frame):
 
         tk.Button(
             botoes_veiculo,
-            text="✎  Editar Cliente",
-            bg="#ffc107",
-            fg="black",
-            bd=1,
-            padx=16,
-            pady=6,
-            font=("Segoe UI", 10, "bold"),
-            command=self.open_edit_client_search,
-        ).pack(side="left", padx=(0, 22))
-
-        tk.Button(
-            botoes_veiculo,
             text="🗑  Excluir Cliente",
             bg="#f33346",
             padx=16,
