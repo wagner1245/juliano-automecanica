@@ -300,6 +300,10 @@ class ClientsFrame(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg="#f5f6f8")
         self.app = app
+        self.cliente_carregado_id = None
+        self.dados_originais_cliente = None
+        self.veiculos_originais = []
+        self._editor_veiculo = None
 
         main_card = tk.Frame(
             self,
@@ -307,7 +311,7 @@ class ClientsFrame(tk.Frame):
             highlightbackground="#d7dce2",
             highlightthickness=1,
             width=900,
-            height=520
+            height=520,
         )
         main_card.pack(anchor="w", padx=10, pady=(0, 14))
         main_card.pack_propagate(False)
@@ -341,8 +345,8 @@ class ClientsFrame(tk.Frame):
             self.cidade_var,
             self.endereco_var,
             self.bairro_var,
-      ):
-         var.trace_add("write", lambda *args, v=var: self._maiusculo_var(v))
+        ):
+            var.trace_add("write", lambda *args, v=var: self._maiusculo_var(v))
 
         self._campo(form, "CPF:", self.cpf_var, 0, 0, width=27)
         self._campo(form, "Nome:", self.nome_var, 0, 1, width=38)
@@ -398,7 +402,7 @@ class ClientsFrame(tk.Frame):
             columns=cols,
             show="headings",
             height=4,
-            style="ClientesVeiculos.Treeview"
+            style="ClientesVeiculos.Treeview",
         )
 
         colunas = [
@@ -415,7 +419,6 @@ class ClientsFrame(tk.Frame):
 
         self.veiculos_tree.pack(fill="x")
 
-        # Linhas em branco para digitar os veículos direto na tabela
         self._limpar_tabela_veiculos()
         self.veiculos_tree.bind("<Double-1>", self.editar_celula_veiculo)
 
@@ -438,6 +441,20 @@ class ClientsFrame(tk.Frame):
 
         tk.Button(
             botoes_veiculo,
+            text="🔎  Buscar Cliente",
+            bg="#0b63ce",
+            fg="white",
+            activebackground="#084ea3",
+            activeforeground="white",
+            bd=0,
+            padx=16,
+            pady=7,
+            font=("Segoe UI", 10, "bold"),
+            command=self.open_search_client_dialog,
+        ).pack(side="left", padx=(0, 22))
+
+        tk.Button(
+            botoes_veiculo,
             text="✎  Editar Cliente",
             bg="#ffc107",
             fg="black",
@@ -456,6 +473,20 @@ class ClientsFrame(tk.Frame):
             pady=6,
             font=("Segoe UI", 10, "bold"),
             command=self.open_delete_client_search,
+        ).pack(side="left", padx=(0, 22))
+
+        tk.Button(
+            botoes_veiculo,
+            text="🧹  Limpar Cliente",
+            bg="#6b7280",
+            fg="white",
+            activebackground="#4b5563",
+            activeforeground="white",
+            bd=0,
+            padx=16,
+            pady=7,
+            font=("Segoe UI", 10, "bold"),
+            command=self.limpar_tela_cliente,
         ).pack(side="left")
 
     def _limpar_tabela_veiculos(self):
@@ -471,6 +502,9 @@ class ClientsFrame(tk.Frame):
 
         if not item or not coluna:
             return
+
+        # Se já existir uma edição aberta, salva antes de abrir outra.
+        self._finalizar_edicao_veiculo()
 
         bbox = self.veiculos_tree.bbox(item, coluna)
         if not bbox:
@@ -491,17 +525,36 @@ class ClientsFrame(tk.Frame):
         entrada.focus_set()
         entrada.select_range(0, tk.END)
 
-        def salvar_edicao(event=None):
-            if not entrada.winfo_exists():
-                return
+        self._editor_veiculo = {
+            "entry": entrada,
+            "item": item,
+            "indice_coluna": indice_coluna,
+        }
 
-            novo_valor = entrada.get().strip().upper()
+        entrada.bind("<Return>", lambda event: self._finalizar_edicao_veiculo())
+        entrada.bind("<FocusOut>", lambda event: self._finalizar_edicao_veiculo())
+
+    def _finalizar_edicao_veiculo(self):
+        if not self._editor_veiculo:
+            return
+
+        entrada = self._editor_veiculo.get("entry")
+        item = self._editor_veiculo.get("item")
+        indice_coluna = self._editor_veiculo.get("indice_coluna")
+
+        if not entrada or not entrada.winfo_exists():
+            self._editor_veiculo = None
+            return
+
+        valores = list(self.veiculos_tree.item(item, "values"))
+        novo_valor = entrada.get().strip().upper()
+
+        if indice_coluna is not None and 0 <= indice_coluna < len(valores):
             valores[indice_coluna] = novo_valor
             self.veiculos_tree.item(item, values=valores)
-            entrada.destroy()
 
-        entrada.bind("<Return>", salvar_edicao)
-        entrada.bind("<FocusOut>", salvar_edicao)
+        entrada.destroy()
+        self._editor_veiculo = None
 
     def _campo(self, parent, label, var, row, col, width=30):
         box = tk.Frame(parent, bg="white")
@@ -515,14 +568,18 @@ class ClientsFrame(tk.Frame):
             font=("Segoe UI", 10),
         ).pack(anchor="w")
 
-        tk.Entry(
+        entry = tk.Entry(
             box,
             textvariable=var,
             width=width,
             font=("Segoe UI", 10),
             relief="solid",
             bd=1,
-        ).pack(fill="x", pady=(4, 0), ipady=4)
+        )
+        entry.pack(fill="x", pady=(4, 0), ipady=4)
+
+        if label == "CPF:":
+            self.cpf_entry = entry
 
     def _normalizar_cpf(self, valor):
         return "".join(ch for ch in str(valor or "") if ch.isdigit())
@@ -537,13 +594,41 @@ class ClientsFrame(tk.Frame):
             "district": self.bairro_var.get().strip(),
         }
 
+    def _coletar_veiculos_tela(self):
+        self._finalizar_edicao_veiculo()
+        veiculos = []
+
+        for item in self.veiculos_tree.get_children():
+            valores = self.veiculos_tree.item(item, "values")
+
+            placa = str(valores[0]).strip().upper() if len(valores) > 0 else ""
+            veiculo = str(valores[1]).strip().upper() if len(valores) > 1 else ""
+            cor = str(valores[2]).strip().upper() if len(valores) > 2 else ""
+            ano = str(valores[3]).strip() if len(valores) > 3 else ""
+            km = str(valores[4]).strip() if len(valores) > 4 else ""
+
+            if placa or veiculo or cor or ano or km:
+                veiculos.append((placa, veiculo, cor, ano, km))
+
+        return veiculos
+
     def _limpar_campos_cliente(self):
+        if hasattr(self, "cpf_entry"):
+            self.cpf_entry.config(state="normal")
+
         self.cpf_var.set("")
         self.nome_var.set("")
         self.telefone_var.set("")
         self.cidade_var.set("")
         self.endereco_var.set("")
         self.bairro_var.set("")
+        self.cliente_carregado_id = None
+        self.dados_originais_cliente = None
+        self.veiculos_originais = []
+
+    def limpar_tela_cliente(self):
+        self._limpar_campos_cliente()
+        self._limpar_tabela_veiculos()
 
     def _limitar_cpf(self, *args):
         texto = "".join(ch for ch in self.cpf_var.get() if ch.isdigit())[:11]
@@ -559,9 +644,13 @@ class ClientsFrame(tk.Frame):
         texto = var.get()
         texto_maiusculo = texto.upper()
         if texto != texto_maiusculo:
-            var.set(texto_maiusculo)    
+            var.set(texto_maiusculo)
 
     def add_client(self):
+        if self.cliente_carregado_id:
+            self.atualizar_cliente_carregado()
+            return
+
         dados = self._coletar_dados_cliente()
 
         if not dados["cpf"]:
@@ -576,18 +665,7 @@ class ClientsFrame(tk.Frame):
             messagebox.showwarning("Atenção", "Informe o nome do cliente.")
             return
 
-        veiculos_para_salvar = []
-        for item in self.veiculos_tree.get_children():
-            valores = self.veiculos_tree.item(item, "values")
-
-            placa = str(valores[0]).strip().upper() if len(valores) > 0 else ""
-            veiculo = str(valores[1]).strip().upper() if len(valores) > 1 else ""
-            cor = str(valores[2]).strip().upper() if len(valores) > 2 else ""
-            ano = str(valores[3]).strip() if len(valores) > 3 else ""
-            km = str(valores[4]).strip() if len(valores) > 4 else ""
-
-            if placa or veiculo or cor or ano or km:
-                veiculos_para_salvar.append((placa, veiculo, cor, ano, km))
+        veiculos_para_salvar = self._coletar_veiculos_tela()
 
         if not veiculos_para_salvar:
             messagebox.showwarning(
@@ -598,12 +676,6 @@ class ClientsFrame(tk.Frame):
 
         con = db()
         cur = con.cursor()
-
-        cur.execute("SELECT id FROM clients WHERE cpf = ?", (dados["cpf"],))
-        if cur.fetchone():
-            con.close()
-            messagebox.showwarning("Atenção", "Este CPF já está cadastrado.")
-            return
 
         if dados["phone"]:
             cur.execute("SELECT id FROM clients WHERE phone = ?", (dados["phone"],))
@@ -637,13 +709,7 @@ class ClientsFrame(tk.Frame):
                 cur.execute(
                     """
                     INSERT INTO vehicles (
-                        client_id,
-                        plate,
-                        vehicle,
-                        color,
-                        year,
-                        mileage,
-                        created_at
+                        client_id, plate, vehicle, color, year, mileage, created_at
                     )
                     VALUES (?, ?, ?, ?, ?, ?, ?)
                     """,
@@ -672,17 +738,298 @@ class ClientsFrame(tk.Frame):
         self._limpar_tabela_veiculos()
         messagebox.showinfo("Sucesso", "Cliente e veículo cadastrados com sucesso.")
 
+    def atualizar_cliente_carregado(self):
+        dados = self._coletar_dados_cliente()
+        veiculos_atuais = self._coletar_veiculos_tela()
+
+        if not dados["cpf"]:
+            messagebox.showwarning("Atenção", "Informe o CPF do cliente.")
+            return
+
+        if len(dados["cpf"]) != 11:
+            messagebox.showwarning("Atenção", "CPF deve conter 11 dígitos.")
+            return
+
+        if not dados["name"]:
+            messagebox.showwarning("Atenção", "Informe o nome do cliente.")
+            return
+
+        if not veiculos_atuais:
+            messagebox.showwarning("Atenção", "Informe pelo menos um veículo na tabela.")
+            return
+
+        dados_comparacao = {
+            "cpf": dados["cpf"],
+            "name": dados["name"],
+            "phone": dados["phone"],
+            "city": dados["city"],
+            "address": dados["address"],
+            "district": dados["district"],
+        }
+
+        if (
+            dados_comparacao == self.dados_originais_cliente
+            and veiculos_atuais == self.veiculos_originais
+        ):
+            messagebox.showwarning("Atenção", "Cliente já cadastrado.")
+            return
+
+        con = db()
+        cur = con.cursor()
+
+        if dados["phone"]:
+            cur.execute(
+                "SELECT id FROM clients WHERE phone = ? AND id <> ?",
+                (dados["phone"], self.cliente_carregado_id),
+            )
+            if cur.fetchone():
+                con.close()
+                messagebox.showwarning("Atenção", "Este telefone já pertence a outro cliente.")
+                return
+
+        try:
+            cur.execute(
+                """
+                UPDATE clients
+                SET cpf = ?, name = ?, phone = ?, city = ?, address = ?, district = ?
+                WHERE id = ?
+                """,
+                (
+                    dados["cpf"],
+                    dados["name"],
+                    dados["phone"],
+                    dados["city"],
+                    dados["address"],
+                    dados["district"],
+                    self.cliente_carregado_id,
+                ),
+            )
+
+            cur.execute(
+                "DELETE FROM vehicles WHERE client_id = ?",
+                (self.cliente_carregado_id,),
+            )
+
+            for placa, veiculo, cor, ano, km in veiculos_atuais:
+                cur.execute(
+                    """
+                    INSERT INTO vehicles (
+                        client_id, plate, vehicle, color, year, mileage, created_at
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """,
+                    (
+                        self.cliente_carregado_id,
+                        placa,
+                        veiculo,
+                        cor,
+                        ano,
+                        km,
+                        datetime.now().isoformat(timespec="seconds"),
+                    ),
+                )
+
+            con.commit()
+
+        except Exception as e:
+            con.rollback()
+            messagebox.showerror("Erro", f"Não foi possível atualizar o cliente:\n{e}")
+            return
+
+        finally:
+            con.close()
+
+        self.dados_originais_cliente = dados_comparacao.copy()
+        self.veiculos_originais = list(veiculos_atuais)
+        messagebox.showinfo("Sucesso", "Dados do cliente atualizados com sucesso.")
+
     def open_edit_client_search(self):
         EditClientSearchDialog(self)
 
     def open_delete_client_search(self):
         DeleteClientSearchDialog(self)
 
+    def open_search_client_dialog(self):
+        SearchClientDialog(self)
+
+    def carregar_cliente_na_tela(self, cliente_id):
+        con = db()
+        cur = con.cursor()
+
+        cur.execute(
+            """
+            SELECT cpf, name, phone, city, address, district
+            FROM clients
+            WHERE id = ?
+            """,
+            (cliente_id,),
+        )
+        cliente = cur.fetchone()
+
+        cur.execute(
+            """
+            SELECT plate, vehicle, color, year, mileage
+            FROM vehicles
+            WHERE client_id = ?
+            ORDER BY id
+            """,
+            (cliente_id,),
+        )
+        veiculos = cur.fetchall()
+
+        con.close()
+
+        if not cliente:
+            messagebox.showwarning("Atenção", "Cliente não encontrado.")
+            return
+
+        if hasattr(self, "cpf_entry"):
+            self.cpf_entry.config(state="normal")
+
+        self.cpf_var.set(cliente[0] or "")
+        self.nome_var.set(cliente[1] or "")
+        self.telefone_var.set(cliente[2] or "")
+        self.cidade_var.set(cliente[3] or "")
+        self.endereco_var.set(cliente[4] or "")
+        self.bairro_var.set(cliente[5] or "")
+
+        for item in self.veiculos_tree.get_children():
+            self.veiculos_tree.delete(item)
+
+        for veiculo in veiculos:
+            self.veiculos_tree.insert("", "end", values=veiculo)
+
+        linhas_vazias = max(0, 3 - len(veiculos))
+        for _ in range(linhas_vazias):
+            self.veiculos_tree.insert("", "end", values=("", "", "", "", ""))
+
+        self.cliente_carregado_id = cliente_id
+        self.dados_originais_cliente = {
+            "cpf": str(cliente[0] or "").strip(),
+            "name": str(cliente[1] or "").strip(),
+            "phone": str(cliente[2] or "").strip(),
+            "city": str(cliente[3] or "").strip(),
+            "address": str(cliente[4] or "").strip(),
+            "district": str(cliente[5] or "").strip(),
+        }
+        self.veiculos_originais = [
+            (
+                str(v[0] or "").strip().upper(),
+                str(v[1] or "").strip().upper(),
+                str(v[2] or "").strip().upper(),
+                str(v[3] or "").strip(),
+                str(v[4] or "").strip(),
+            )
+            for v in veiculos
+        ]
+
+        if hasattr(self, "cpf_entry"):
+            self.cpf_entry.config(state="normal")
+
     def _acao_visual(self):
         messagebox.showinfo("Em breve", "Por enquanto esta tela é apenas visual.")
 
     def refresh(self):
         pass
+
+class SearchClientDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+
+        self.title("Buscar Cliente")
+        self.geometry("380x190")
+        self.resizable(False, False)
+        self.configure(bg="#f5f6f8")
+        self.grab_set()
+
+        frame = tk.Frame(self, bg="#f5f6f8", padx=22, pady=20)
+        frame.pack(fill="both", expand=True)
+
+        tk.Label(
+            frame,
+            text="Digite Nome do Cliente ou Telefone ou CPF:",
+            bg="#f5f6f8",
+            fg="#111827",
+            font=("Segoe UI", 10, "bold")
+        ).pack(pady=(0, 10))
+
+        self.search_var = tk.StringVar()
+
+        self.search_entry = tk.Entry(
+            frame,
+            textvariable=self.search_var,
+            width=30,
+            font=("Segoe UI", 10),
+            justify="center"
+        )
+        self.search_entry.pack(pady=(0, 12), ipady=3)
+        self.search_entry.focus_set()
+
+        tk.Button(
+            frame,
+            text="Buscar",
+            bg="#0b63ce",
+            fg="white",
+            activebackground="#084ea3",
+            activeforeground="white",
+            bd=0,
+            padx=18,
+            pady=7,
+            font=("Segoe UI", 10, "bold"),
+            command=self.buscar_cliente
+        ).pack()
+
+        self.bind("<Return>", lambda event: self.buscar_cliente())
+
+        self.update_idletasks()
+        largura = self.winfo_width()
+        altura = self.winfo_height()
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        x = (sw // 2) - (largura // 2)
+        y = (sh // 2) - (altura // 2)
+        self.geometry(f"+{x}+{y}")
+
+    def buscar_cliente(self):
+        valor_original = self.search_var.get().strip()
+        valor_numerico = "".join(ch for ch in valor_original if ch.isdigit())
+        valor_nome = valor_original.upper()
+
+        if not valor_original:
+            messagebox.showwarning("Atenção", "Digite CPF, telefone ou nome.")
+            return
+
+        con = db()
+        cur = con.cursor()
+
+        cur.execute(
+            """
+            SELECT id
+            FROM clients
+            WHERE cpf = ?
+               OR phone = ?
+               OR UPPER(name) LIKE ?
+            ORDER BY name
+            LIMIT 1
+            """,
+            (
+                valor_numerico,
+                valor_numerico,
+                f"%{valor_nome}%"
+             )
+         )
+
+        cliente = cur.fetchone()
+        con.close()
+
+        if not cliente:
+            messagebox.showwarning("Atenção", "Cliente não encontrado.")
+            return
+
+        self.parent.carregar_cliente_na_tela(cliente[0])
+        messagebox.showinfo("Sucesso", "Cliente carregado na tela.")
+        self.destroy()    
 
 class EditClientSearchDialog(tk.Toplevel):
     def __init__(self, parent):
