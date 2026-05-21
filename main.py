@@ -588,14 +588,39 @@ class ClientsFrame(tk.Frame):
 
         valor_atual = valores[indice_coluna]
 
-        entrada = tk.Entry(self.veiculos_tree)
+        # Na coluna da placa, durante a digitação deixamos apenas letras/números
+        # em maiúsculo. O formato com traço é aplicado somente ao finalizar
+        # a edição, evitando que o cursor fique antes do traço.
+        if indice_coluna == 0:
+            valor_atual = self._normalizar_placa_digitacao(valor_atual)
+
+        entrada_var = tk.StringVar(value=valor_atual)
+
+        entrada = tk.Entry(self.veiculos_tree, textvariable=entrada_var)
+
+        if indice_coluna == 0:
+            ajustando_placa = {"ativo": False}
+
+            def normalizar_placa_ao_digitar(*args):
+                if ajustando_placa["ativo"]:
+                    return
+
+                texto_normalizado = self._normalizar_placa_digitacao(entrada_var.get())
+
+                if entrada_var.get() != texto_normalizado:
+                    ajustando_placa["ativo"] = True
+                    entrada_var.set(texto_normalizado)
+                    ajustando_placa["ativo"] = False
+                    entrada.icursor(tk.END)
+
+            entrada_var.trace_add("write", normalizar_placa_ao_digitar)
         entrada.place(x=x, y=y, width=largura, height=altura)
-        entrada.insert(0, valor_atual)
         entrada.focus_set()
         entrada.select_range(0, tk.END)
 
         self._editor_veiculo = {
             "entry": entrada,
+            "entry_var": entrada_var,
             "item": item,
             "indice_coluna": indice_coluna,
         }
@@ -621,6 +646,9 @@ class ClientsFrame(tk.Frame):
             valores.append("")
 
         novo_valor = entrada.get().strip().upper()
+
+        if indice_coluna == 0:
+            novo_valor = self._formatar_placa(novo_valor)
 
         if indice_coluna is not None and 0 <= indice_coluna < 5:
             valores[indice_coluna] = novo_valor
@@ -663,6 +691,17 @@ class ClientsFrame(tk.Frame):
     def _normalizar_cpf(self, valor):
         return "".join(ch for ch in str(valor or "") if ch.isdigit())
 
+    def _normalizar_placa_digitacao(self, valor):
+        return "".join(ch for ch in str(valor or "").upper() if ch.isalnum())[:7]
+
+    def _formatar_placa(self, valor):
+        texto = self._normalizar_placa_digitacao(valor)
+
+        if len(texto) > 3:
+            return f"{texto[:3]} - {texto[3:]}"
+
+        return texto
+
     def _coletar_dados_cliente(self):
         return {
             "cpf": self._normalizar_cpf(self.cpf_var.get().strip()),
@@ -680,7 +719,7 @@ class ClientsFrame(tk.Frame):
         for item in self.veiculos_tree.get_children():
             valores = self.veiculos_tree.item(item, "values")
 
-            placa = str(valores[0]).strip().upper() if len(valores) > 0 else ""
+            placa = self._formatar_placa(valores[0]) if len(valores) > 0 else ""
             veiculo = str(valores[1]).strip().upper() if len(valores) > 1 else ""
             cor = str(valores[2]).strip().upper() if len(valores) > 2 else ""
             ano = str(valores[3]).strip() if len(valores) > 3 else ""
@@ -979,7 +1018,13 @@ class ClientsFrame(tk.Frame):
 
         for veiculo in veiculos:
             veiculo_id = veiculo[0]
-            dados_veiculo = veiculo[1:]
+            dados_veiculo = (
+                self._formatar_placa(veiculo[1]),
+                str(veiculo[2] or "").strip().upper(),
+                str(veiculo[3] or "").strip().upper(),
+                str(veiculo[4] or "").strip(),
+                str(veiculo[5] or "").strip(),
+            )
             item = self.veiculos_tree.insert("", "end", values=(*dados_veiculo, "🗑"))
             self.veiculos_ids[item] = veiculo_id
 
@@ -998,7 +1043,7 @@ class ClientsFrame(tk.Frame):
         }
         self.veiculos_originais = [
             (
-                str(v[1] or "").strip().upper(),
+                self._formatar_placa(v[1]),
                 str(v[2] or "").strip().upper(),
                 str(v[3] or "").strip().upper(),
                 str(v[4] or "").strip(),
