@@ -955,6 +955,7 @@ class SearchClientDialog(tk.Toplevel):
         ).pack(pady=(0, 10))
 
         self.search_var = tk.StringVar()
+        self.search_var.trace_add("write", lambda *args: self._maiusculo_busca())
 
         self.search_entry = tk.Entry(
             frame,
@@ -990,6 +991,13 @@ class SearchClientDialog(tk.Toplevel):
         x = (sw // 2) - (largura // 2)
         y = (sh // 2) - (altura // 2)
         self.geometry(f"+{x}+{y}")
+
+    def _maiusculo_busca(self):
+        texto = self.search_var.get()
+        texto_maiusculo = texto.upper()
+
+        if texto != texto_maiusculo:
+            self.search_var.set(texto_maiusculo)
 
     def buscar_cliente(self):
         valor_original = self.search_var.get().strip()
