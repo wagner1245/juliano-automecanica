@@ -641,6 +641,21 @@ class ClientsFrame(tk.Frame):
 
             entrada_var.trace_add("write", deixar_maiusculo_ao_digitar)
 
+            # Coluna 2 = Veículo
+            # Ao apertar espaço pela primeira vez, troca por " - "
+            if indice_coluna == 1:
+                def substituir_espaco_por_traco(event=None):
+                    texto_atual = entrada_var.get().strip().upper()
+
+                    if texto_atual and " - " not in texto_atual:
+                        entrada_var.set(texto_atual + " - ")
+                        entrada.icursor(tk.END)
+                        return "break"
+
+                    return None
+
+                entrada.bind("<space>", substituir_espaco_por_traco)
+
         entrada.place(x=x, y=y, width=largura, height=altura)
         entrada.focus_set()
         entrada.select_range(0, tk.END)
