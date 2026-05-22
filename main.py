@@ -2851,7 +2851,7 @@ class ServicesFrame(tk.Frame):
 
             nome_oficina = "Juliano Automecânica"
             data_atual = datetime.now().strftime("%d/%m/%Y")
-            hora_arquivo = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+            hora_arquivo = datetime.now().strftime("%d-%m-%Y")
 
             mao_de_obra = self.mao_obra_var.get().strip() or "0,00"
             total_pecas = self.total_pecas_var.get().strip() or "R$ 0,00"
@@ -2958,10 +2958,18 @@ class ServicesFrame(tk.Frame):
             os.makedirs(pasta_saida, exist_ok=True)
 
             nome_limpo = "".join(c for c in nome_cliente if c.isalnum() or c in (" ", "_", "-")).strip()
-            nome_limpo = nome_limpo.replace(" ", "_")
+            nome_limpo = nome_limpo.replace(" ", "_").upper()
 
-            nome_arquivo = f"orcamento_{nome_limpo}_{hora_arquivo}.png"
+            data_arquivo = datetime.now().strftime("%d-%m-%Y")
+            nome_base = f"{data_arquivo}_{nome_limpo}"
+            nome_arquivo = f"{nome_base}.png"
             caminho_saida = os.path.join(pasta_saida, nome_arquivo)
+
+            contador = 2
+            while os.path.exists(caminho_saida):
+                nome_arquivo = f"{nome_base}_{contador}.png"
+                caminho_saida = os.path.join(pasta_saida, nome_arquivo)
+                contador += 1
 
             img.save(caminho_saida)
 
