@@ -485,9 +485,13 @@ class ClientsFrame(tk.Frame):
         tk.Button(
             botoes_veiculo,
             text="🗑  Excluir Cliente",
-            bg="#f33346",
+            bg="#0b63ce",
+            fg="white",
+            activebackground="#084ea3",
+            activeforeground="white",
+            bd=0,
             padx=16,
-            pady=6,
+            pady=7,
             font=("Segoe UI", 10, "bold"),
             command=self.open_delete_client_search,
         ).pack(side="left", padx=(0, 22))
@@ -1210,10 +1214,22 @@ class SearchClientDialog(tk.Toplevel):
 
     def _maiusculo_busca(self):
         texto = self.search_var.get()
-        texto_maiusculo = texto.upper()
+        texto_formatado = []
+        total_numeros = 0
 
-        if texto != texto_maiusculo:
-            self.search_var.set(texto_maiusculo)
+        for caractere in texto.upper():
+            if caractere.isdigit():
+                if total_numeros < 11:
+                    texto_formatado.append(caractere)
+                    total_numeros += 1
+            else:
+                texto_formatado.append(caractere)
+
+        texto_final = "".join(texto_formatado)
+
+        if texto != texto_final:
+            self.search_var.set(texto_final)
+            self.search_entry.icursor(tk.END)
 
     def buscar_cliente(self):
         valor_original = self.search_var.get().strip()
