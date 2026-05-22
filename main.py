@@ -101,12 +101,49 @@ class App(tk.Tk):
         data_atual = datetime.now().strftime("%d/%m/%Y")
 
         tk.Label(
-        self.sidebar,
-        text=data_atual,
-        bg="#243246",
-        fg="white",
-        font=("Segoe UI", 16, "bold")
+            self.sidebar,
+            text=data_atual,
+            bg="#243246",
+            fg="white",
+            font=("Segoe UI", 16, "bold")
         ).pack(side="bottom", pady=30)
+
+        self.total_clientes_var = tk.StringVar(value="0")
+
+        total_clientes_card = tk.Frame(
+            self.sidebar,
+            bg="#243246",
+            highlightthickness=0,
+            bd=0,
+            width=220,
+            height=88,
+        )
+        total_clientes_card.pack(side="bottom", fill="x", padx=18, pady=(0, 6))
+        total_clientes_card.pack_propagate(False)
+
+        tk.Label(
+            total_clientes_card,
+            text="Total de Clientes",
+            bg="#243246",
+            fg="white",
+            font=("Segoe UI", 11),
+        ).pack(pady=(10, 0))
+
+        tk.Label(
+            total_clientes_card,
+            text="cadastrados",
+            bg="#243246",
+            fg="white",
+            font=("Segoe UI", 11),
+        ).pack()
+
+        tk.Label(
+            total_clientes_card,
+            textvariable=self.total_clientes_var,
+            bg="#243246",
+            fg="#3b82f6",
+            font=("Segoe UI", 22, "bold"),
+        ).pack(pady=(0, 6))
 
         self.main = tk.Frame(self, bg="#f5f6f8")
         self.main.pack(side="right", fill="both", expand=True)
@@ -229,8 +266,20 @@ class App(tk.Tk):
     def show(self, frame_name):
         frame = self.frames[frame_name]
         frame.tkraise()
+        self.atualizar_total_clientes()
         if hasattr(frame, "refresh"):
             frame.refresh()
+
+    def atualizar_total_clientes(self):
+        try:
+            con = db()
+            cur = con.cursor()
+            cur.execute("SELECT COUNT(*) FROM clients")
+            total = cur.fetchone()[0] or 0
+            con.close()
+            self.total_clientes_var.set(str(total))
+        except Exception:
+            self.total_clientes_var.set("0")
 
 class DashboardFrame(tk.Frame):
     def __init__(self, parent, app):
@@ -946,6 +995,7 @@ class ClientsFrame(tk.Frame):
 
         self._limpar_campos_cliente()
         self._limpar_tabela_veiculos()
+        self.app.atualizar_total_clientes()
         messagebox.showinfo("Sucesso", "Cliente e veículo cadastrados com sucesso.")
 
     def atualizar_cliente_carregado(self):
@@ -1653,6 +1703,7 @@ class DeleteClientSearchDialog(tk.Toplevel):
         con.commit()
         con.close()
 
+        self.parent.app.atualizar_total_clientes()
         messagebox.showinfo("Sucesso", "Cliente excluído com sucesso.")
         self.destroy()
 
