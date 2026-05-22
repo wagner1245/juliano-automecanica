@@ -2452,7 +2452,7 @@ class ServicesFrame(tk.Frame):
 
         tk.Label(
             linha1,
-            text="Buscar (Placa / CPF / Nome):",
+            text="Buscar por Placa ou Telefone:",
             bg="#f5f6f8",
             font=("Segoe UI", 10, "bold"),
         ).pack(side="left", padx=(10, 5))
@@ -2465,7 +2465,7 @@ class ServicesFrame(tk.Frame):
             width=15,
         )
         self.search_plate.pack(side="left", padx=(0, 10))
-        self.search_var.trace_add("write", lambda *args: self.buscar_cliente())
+        self.search_var.trace_add("write", self._normalizar_busca_orcamento)
 
         tk.Button(linha1, text="Adicionar", command=self.add_dialog).pack(side="left", padx=10)
         tk.Button(linha1, text="Editar", command=self.edit_dialog).pack(side="left", padx=5)
@@ -2603,10 +2603,30 @@ class ServicesFrame(tk.Frame):
         self.atualizar_label_cliente()
         messagebox.showinfo("Sucesso", "Cliente novo vinculado ao orçamento.")
 
+    def _normalizar_busca_orcamento(self, *args):
+        texto_atual = self.search_var.get()
+        texto_formatado = ""
+        total_numeros = 0
+
+        for caractere in texto_atual.upper():
+            if caractere.isdigit():
+                if total_numeros < 11:
+                    texto_formatado += caractere
+                    total_numeros += 1
+            elif caractere.isalpha():
+                texto_formatado += caractere
+
+        if texto_atual != texto_formatado:
+            self.search_var.set(texto_formatado)
+            return
+
+        self.buscar_cliente()
+
     def buscar_cliente(self):
         termo_original = self.search_var.get().strip()
         termo_maiusculo = termo_original.upper()
-        termo_cpf = "".join(ch for ch in termo_original if ch.isdigit())
+        termo_telefone = "".join(ch for ch in termo_original if ch.isdigit())
+        termo_placa = "".join(ch for ch in termo_maiusculo if ch.isalnum())
 
         self.sugestoes.delete(0, tk.END)
         self._resultados_busca = []
@@ -2619,19 +2639,23 @@ class ServicesFrame(tk.Frame):
         cur = con.cursor()
         cur.execute(
             """
-            SELECT id, cpf, plate, name, vehicle
-            FROM clients
+            SELECT DISTINCT
+                c.id,
+                c.phone,
+                v.plate,
+                c.name,
+                v.vehicle
+            FROM clients c
+            LEFT JOIN vehicles v ON v.client_id = c.id
             WHERE
-                REPLACE(REPLACE(REPLACE(COALESCE(cpf, ''), '.', ''), '-', ''), '/', '') LIKE ?
-                OR UPPER(COALESCE(name, '')) LIKE ?
-                OR UPPER(COALESCE(plate, '')) LIKE ?
-            ORDER BY name
+                c.phone LIKE ?
+                OR UPPER(REPLACE(REPLACE(COALESCE(v.plate, ''), '-', ''), ' ', '')) LIKE ?
+            ORDER BY c.name
             LIMIT 10
             """,
             (
-                f"{termo_cpf}%" if termo_cpf else "",
-                f"{termo_maiusculo}%",
-                f"{termo_maiusculo}%",
+                f"{termo_telefone}%" if termo_telefone else "",
+                f"{termo_placa}%" if termo_placa else "",
             ),
         )
         resultados = cur.fetchall()
@@ -2642,9 +2666,9 @@ class ServicesFrame(tk.Frame):
             return
 
         self._resultados_busca = resultados
-        for client_id, cpf, plate, name, vehicle in resultados:
+        for client_id, telefone, plate, name, vehicle in resultados:
             texto = (
-                f"CPF: {cpf or '-'} | PLACA: {plate or '-'} | "
+                f"TELEFONE: {telefone or '-'} | PLACA: {plate or '-'} | "
                 f"NOME: {name or '-'} | VEÍCULO: {vehicle or '-'}"
             )
             self.sugestoes.insert(tk.END, texto)
@@ -2660,7 +2684,7 @@ class ServicesFrame(tk.Frame):
         if indice >= len(self._resultados_busca):
             return
 
-        client_id, cpf, plate, name, vehicle = self._resultados_busca[indice]
+        client_id, telefone, plate, name, vehicle = self._resultados_busca[indice]
 
         self.selected_client_id = client_id
         self.nome_orcamento_var.set(name or "")
