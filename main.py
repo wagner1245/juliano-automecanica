@@ -382,19 +382,33 @@ class ClientsFrame(tk.Frame):
             background="white",
             foreground="#111827",
             fieldbackground="white",
-            rowheight=30,
-            bordercolor="#d1d5db",
+            rowheight=32,
+            bordercolor="#9ca3af",
             borderwidth=1,
+            relief="solid",
             font=("Segoe UI", 10),
         )
         style.configure(
             "ClientesVeiculos.Treeview.Heading",
             background="#f3f4f6",
             foreground="#111827",
+            bordercolor="#9ca3af",
+            borderwidth=1,
+            relief="solid",
             font=("Segoe UI", 10, "bold"),
         )
+        style.map(
+            "ClientesVeiculos.Treeview",
+            background=[("selected", "#dbeafe")],
+            foreground=[("selected", "#111827")],
+        )
 
-        tabela_frame = tk.Frame(main_card, bg="white")
+        tabela_frame = tk.Frame(
+            main_card,
+            bg="white",
+            highlightbackground="#9ca3af",
+            highlightthickness=1,
+        )
         tabela_frame.pack(fill="x", padx=22)
 
         cols = ("placa", "veiculo", "cor", "ano", "km", "acao")
@@ -428,6 +442,10 @@ class ClientsFrame(tk.Frame):
 
         self.veiculos_tree.pack(side="left", fill="x", expand=True)
         scrollbar_veiculos.pack(side="right", fill="y")
+
+        self.veiculos_tree.tag_configure("linha_par", background="#ffffff")
+        self.veiculos_tree.tag_configure("linha_impar", background="#f3f4f6")
+        self.veiculos_tree.tag_configure("linha_vazia", background="#ffffff")
 
         self._limpar_tabela_veiculos()
         self.veiculos_tree.bind("<Double-1>", self.editar_celula_veiculo)
@@ -494,7 +512,29 @@ class ClientsFrame(tk.Frame):
         for item in self.veiculos_tree.get_children():
             self.veiculos_tree.delete(item)
 
-        self.veiculos_tree.insert("", "end", values=("", "", "", "", "", ""))
+        self._preencher_linhas_vazias_veiculo()
+        self._atualizar_linhas_tabela_veiculos()
+
+    def _preencher_linhas_vazias_veiculo(self, minimo_linhas=4):
+        while len(self.veiculos_tree.get_children()) < minimo_linhas:
+            self.veiculos_tree.insert("", "end", values=("", "", "", "", "", ""), tags=("linha_vazia",))
+
+    def _atualizar_linhas_tabela_veiculos(self):
+        indice_dados = 0
+
+        for item in self.veiculos_tree.get_children():
+            valores = list(self.veiculos_tree.item(item, "values"))
+
+            while len(valores) < 6:
+                valores.append("")
+
+            if self._linha_veiculo_tem_dados(valores):
+                tag = "linha_par" if indice_dados % 2 == 0 else "linha_impar"
+                indice_dados += 1
+            else:
+                tag = "linha_vazia"
+
+            self.veiculos_tree.item(item, tags=(tag,))
 
     def _linha_veiculo_tem_dados(self, valores):
         valores = list(valores)
@@ -515,7 +555,10 @@ class ClientsFrame(tk.Frame):
                 break
 
         if not tem_linha_vazia:
-            self.veiculos_tree.insert("", "end", values=("", "", "", "", "", ""))
+            self.veiculos_tree.insert("", "end", values=("", "", "", "", "", ""), tags=("linha_vazia",))
+
+        self._preencher_linhas_vazias_veiculo()
+        self._atualizar_linhas_tabela_veiculos()
 
     def excluir_veiculo_da_tabela(self, event):
         item = self.veiculos_tree.identify_row(event.y)
@@ -703,6 +746,7 @@ class ClientsFrame(tk.Frame):
             self.veiculos_tree.item(item, values=valores)
 
         self._garantir_linha_vazia_veiculo()
+        self._atualizar_linhas_tabela_veiculos()
 
         entrada.destroy()
         self._editor_veiculo = None
@@ -1069,10 +1113,11 @@ class ClientsFrame(tk.Frame):
                 str(veiculo[4] or "").strip(),
                 str(veiculo[5] or "").strip(),
             )
-            item = self.veiculos_tree.insert("", "end", values=(*dados_veiculo, "🗑"))
+            item = self.veiculos_tree.insert("", "end", values=(*dados_veiculo, "🗑"), tags=("linha_par",))
             self.veiculos_ids[item] = veiculo_id
 
         self._garantir_linha_vazia_veiculo()
+        self._atualizar_linhas_tabela_veiculos()
 
         self.cliente_carregado_id = cliente_id
         self.dados_originais_cliente = {
