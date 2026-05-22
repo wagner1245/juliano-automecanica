@@ -843,6 +843,80 @@ class ClientsFrame(tk.Frame):
 
         return texto
 
+    def _normalizar_placa_banco(self, valor):
+        return "".join(ch for ch in str(valor or "").upper() if ch.isalnum())
+
+    def _validar_placas_duplicadas(self, veiculos, cliente_id_ignorar=None):
+        placas_digitadas = {}
+
+        for placa, veiculo, cor, ano, km in veiculos:
+            placa_normalizada = self._normalizar_placa_banco(placa)
+
+            if not placa_normalizada:
+                continue
+
+            if placa_normalizada in placas_digitadas:
+                messagebox.showwarning(
+                    "Atenção",
+                    f"A placa {placa} foi informada mais de uma vez na tabela."
+                )
+                return False
+
+            placas_digitadas[placa_normalizada] = placa
+
+        if not placas_digitadas:
+            return True
+
+        try:
+            con = db()
+            cur = con.cursor()
+
+            for placa_normalizada, placa_exibicao in placas_digitadas.items():
+                if cliente_id_ignorar:
+                    cur.execute(
+                        """
+                        SELECT c.name
+                        FROM vehicles v
+                        INNER JOIN clients c ON c.id = v.client_id
+                        WHERE UPPER(REPLACE(REPLACE(COALESCE(v.plate, ''), '-', ''), ' ', '')) = ?
+                          AND v.client_id <> ?
+                        LIMIT 1
+                        """,
+                        (placa_normalizada, cliente_id_ignorar),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT c.name
+                        FROM vehicles v
+                        INNER JOIN clients c ON c.id = v.client_id
+                        WHERE UPPER(REPLACE(REPLACE(COALESCE(v.plate, ''), '-', ''), ' ', '')) = ?
+                        LIMIT 1
+                        """,
+                        (placa_normalizada,),
+                    )
+
+                existente = cur.fetchone()
+
+                if existente:
+                    con.close()
+                    nome_cliente = existente[0] or "outro cliente"
+                    messagebox.showwarning(
+                        "Atenção",
+                        f"A placa {placa_exibicao} já está cadastrada para {nome_cliente}."
+                    )
+                    return False
+
+            con.close()
+            return True
+
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Não foi possível validar placa duplicada:\n{e}"
+            )
+            return False
+
     def _coletar_dados_cliente(self):
         return {
             "cpf": self._normalizar_cpf(self.cpf_var.get().strip()),
@@ -933,6 +1007,9 @@ class ClientsFrame(tk.Frame):
             )
             return
 
+        if not self._validar_placas_duplicadas(veiculos_para_salvar):
+            return
+
         con = db()
         cur = con.cursor()
 
@@ -1016,6 +1093,12 @@ class ClientsFrame(tk.Frame):
 
         if not veiculos_atuais:
             messagebox.showwarning("Atenção", "Informe pelo menos um veículo na tabela.")
+            return
+
+        if not self._validar_placas_duplicadas(
+            veiculos_atuais,
+            cliente_id_ignorar=self.cliente_carregado_id
+        ):
             return
 
         dados_comparacao = {
