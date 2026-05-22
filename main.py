@@ -1299,7 +1299,7 @@ class SearchClientDialog(tk.Toplevel):
             FROM clients c
             LEFT JOIN vehicles v ON v.client_id = c.id
             WHERE c.phone = ?
-               OR UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) = ?
+               OR UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) LIKE ?
             ORDER BY c.name
             LIMIT 1
             """,
@@ -1671,11 +1671,11 @@ class DeleteClientSearchDialog(tk.Toplevel):
             FROM clients c
             LEFT JOIN vehicles v ON v.client_id = c.id
             WHERE c.phone = ?
-               OR UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) = ?
+               OR UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) LIKE ?
             ORDER BY c.name
             LIMIT 1
             """,
-            (valor_telefone, valor_placa)
+            (valor_telefone, valor_placa + '%')
         )
         cliente = cur.fetchone()
         con.close()
@@ -2452,7 +2452,7 @@ class ServicesFrame(tk.Frame):
 
         tk.Label(
             linha1,
-            text="Buscar por Placa ou Telefone:",
+            text="Buscar por Placa:",
             bg="#f5f6f8",
             font=("Segoe UI", 10, "bold"),
         ).pack(side="left", padx=(10, 5))
@@ -2572,7 +2572,7 @@ class ServicesFrame(tk.Frame):
             tipo = "Novo" if self.orcamento_cliente_tipo == "novo" else "Existente"
             self.cliente_vinculado_var.set(
                 f"Cliente vinculado: {self.orcamento_cliente_nome} | "
-                f"Veículo: {self.orcamento_cliente_veiculo} | Tipo: {tipo}"
+                f"Veículo: {self.orcamento_cliente_veiculo} | Tipo de Cliente: {tipo}"
             )
         else:
             self.cliente_vinculado_var.set("Cliente vinculado: nenhum")
@@ -2605,33 +2605,24 @@ class ServicesFrame(tk.Frame):
 
     def _normalizar_busca_orcamento(self, *args):
         texto_atual = self.search_var.get()
-        texto_formatado = ""
-        total_numeros = 0
-
-        for caractere in texto_atual.upper():
-            if caractere.isdigit():
-                if total_numeros < 11:
-                    texto_formatado += caractere
-                    total_numeros += 1
-            elif caractere.isalpha():
-                texto_formatado += caractere
+        texto_formatado = "".join(
+            caractere for caractere in texto_atual.upper()
+            if caractere.isalnum()
+        )[:7]
 
         if texto_atual != texto_formatado:
             self.search_var.set(texto_formatado)
-            return
 
-        self.buscar_cliente()
+        self.after_idle(self.buscar_cliente)
 
     def buscar_cliente(self):
         termo_original = self.search_var.get().strip()
-        termo_maiusculo = termo_original.upper()
-        termo_telefone = "".join(ch for ch in termo_original if ch.isdigit())
-        termo_placa = "".join(ch for ch in termo_maiusculo if ch.isalnum())
+        termo_placa = "".join(ch for ch in termo_original.upper() if ch.isalnum())
 
         self.sugestoes.delete(0, tk.END)
         self._resultados_busca = []
 
-        if not termo_original:
+        if not termo_placa:
             self.sugestoes.pack_forget()
             return
 
@@ -2646,17 +2637,12 @@ class ServicesFrame(tk.Frame):
                 c.name,
                 v.vehicle
             FROM clients c
-            LEFT JOIN vehicles v ON v.client_id = c.id
-            WHERE
-                c.phone LIKE ?
-                OR UPPER(REPLACE(REPLACE(COALESCE(v.plate, ''), '-', ''), ' ', '')) LIKE ?
-            ORDER BY c.name
+            INNER JOIN vehicles v ON v.client_id = c.id
+            WHERE UPPER(REPLACE(REPLACE(COALESCE(v.plate, ''), '-', ''), ' ', '')) LIKE ?
+            ORDER BY v.plate
             LIMIT 10
             """,
-            (
-                f"{termo_telefone}%" if termo_telefone else "",
-                f"{termo_placa}%" if termo_placa else "",
-            ),
+            (f"{termo_placa}%",),
         )
         resultados = cur.fetchall()
         con.close()
