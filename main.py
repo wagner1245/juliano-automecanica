@@ -288,7 +288,7 @@ class DashboardFrame(tk.Frame):
 
         tk.Label(
             self,
-            text="Orçamento",
+            text="ORÇAMENTO",
             bg="#f5f6f8",
             fg="#1f2a37",
             font=("Segoe UI", 18, "bold"),
@@ -2407,7 +2407,7 @@ class ServicesFrame(tk.Frame):
         top.pack(fill="x")
         tk.Label(
             top,
-            text="Orçamento",
+            text="ORÇAMENTO",
             bg="#f5f6f8",
             fg="#1f2a37",
             font=("Segoe UI", 18, "bold"),
