@@ -2212,37 +2212,24 @@ class OrcamentoPreview(tk.Toplevel):
         lbl.pack(pady=20)
 
     def enviar_para_cliente(self):
-        telefone_base = str(self.telefone or "").strip()
-        telefone_limpo = "".join(ch for ch in telefone_base if ch.isdigit())
+        telefone_cliente = self.telefone or ""
 
-        if not telefone_limpo:
-            telefone_digitado = simpledialog.askstring(
-                "Telefone do Cliente",
-                "Digite o telefone com WhatsApp (com DDD):",
-                parent=self
+        if not telefone_cliente:
+            telefone_cliente = self._pedir_telefone_whatsapp()
+
+            if telefone_cliente is None:
+                return
+
+        telefone_limpo = "".join(ch for ch in str(telefone_cliente) if ch.isdigit())[:11]
+
+        if len(telefone_limpo) != 11:
+            messagebox.showwarning(
+                "Atenção",
+                "Informe um telefone válido com 11 dígitos.\nExemplo: 11999999999"
             )
-
-            if not telefone_digitado:
-                return
-
-            telefone_limpo = "".join(ch for ch in telefone_digitado if ch.isdigit())
-
-            if len(telefone_limpo) < 10:
-                messagebox.showwarning(
-                    "Atenção",
-                    "Telefone inválido. Digite um número com DDD."
-                )
-                return
-
-            self.telefone = telefone_limpo
-
-        if len(telefone_limpo) == 11:
-            telefone_limpo = "55" + telefone_limpo
-        elif len(telefone_limpo) == 10:
-            telefone_limpo = "55" + telefone_limpo
-
-        if not self.salvar_orcamento_enviado():
             return
+
+        telefone_envio = "55" + telefone_limpo
 
         mensagem = (
             f"Olá {self.nome_cliente}!\n\n"
@@ -2250,16 +2237,104 @@ class OrcamentoPreview(tk.Toplevel):
             f"Qualquer dúvida estou à disposição."
         )
 
-        link = f"whatsapp://send?phone={telefone_limpo}&text={urllib.parse.quote(mensagem)}"
+        texto_url = urllib.parse.quote(mensagem)
+        url = f"whatsapp://send?phone={telefone_envio}&text={texto_url}"
 
-        try:
-            os.startfile(link)
-        except Exception:
-            try:
-                webbrowser.open(link)
-            except Exception as e:
-                messagebox.showerror("Erro", f"Não foi possível abrir o WhatsApp:\n{e}")
+        if self.salvar_orcamento_enviado():
+            webbrowser.open(url)
+
+    def _pedir_telefone_whatsapp(self):
+        janela = tk.Toplevel(self)
+        janela.title("Telefone do Cliente")
+        janela.configure(bg="#f5f6f8")
+        janela.resizable(False, False)
+        janela.transient(self)
+        janela.grab_set()
+
+        telefone_var = tk.StringVar()
+
+        box = tk.Frame(janela, bg="#f5f6f8", padx=18, pady=14)
+        box.pack(fill="both", expand=True)
+
+        tk.Label(
+            box,
+            text="Digite o telefone com WhatsApp (com DDD):",
+            bg="#f5f6f8",
+            fg="#111827",
+            font=("Segoe UI", 9),
+        ).pack(anchor="w", pady=(0, 6))
+
+        entrada = tk.Entry(
+            box,
+            textvariable=telefone_var,
+            width=28,
+            font=("Segoe UI", 10),
+            justify="center",
+        )
+        entrada.pack(ipady=3)
+        entrada.focus_set()
+
+        def limitar_telefone(*args):
+            texto = "".join(ch for ch in telefone_var.get() if ch.isdigit())[:11]
+
+            if telefone_var.get() != texto:
+                telefone_var.set(texto)
+                entrada.icursor(tk.END)
+
+        telefone_var.trace_add("write", limitar_telefone)
+
+        resultado = {"telefone": None}
+
+        def confirmar():
+            telefone = telefone_var.get().strip()
+
+            if len(telefone) != 11:
+                messagebox.showwarning(
+                    "Atenção",
+                    "Informe um telefone válido com 11 dígitos.\nExemplo: 11999999999",
+                    parent=janela,
+                )
                 return
+
+            resultado["telefone"] = telefone
+            janela.destroy()
+
+        def cancelar():
+            resultado["telefone"] = None
+            janela.destroy()
+
+        botoes = tk.Frame(box, bg="#f5f6f8")
+        botoes.pack(pady=(10, 0))
+
+        tk.Button(
+            botoes,
+            text="OK",
+            width=9,
+            command=confirmar,
+        ).pack(side="left", padx=(0, 8))
+
+        tk.Button(
+            botoes,
+            text="Cancelar",
+            width=9,
+            command=cancelar,
+        ).pack(side="left")
+
+        janela.bind("<Return>", lambda event: confirmar())
+        janela.bind("<Escape>", lambda event: cancelar())
+        janela.protocol("WM_DELETE_WINDOW", cancelar)
+
+        janela.update_idletasks()
+        largura = janela.winfo_width()
+        altura = janela.winfo_height()
+        sw = janela.winfo_screenwidth()
+        sh = janela.winfo_screenheight()
+        x = (sw // 2) - (largura // 2)
+        y = (sh // 2) - (altura // 2)
+        janela.geometry(f"+{x}+{y}")
+
+        self.wait_window(janela)
+        return resultado["telefone"]
 
     def imprimir_orcamento(self):
         if not os.path.exists(self.caminho_imagem):
