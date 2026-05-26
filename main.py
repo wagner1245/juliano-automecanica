@@ -407,7 +407,7 @@ class ClientsFrame(tk.Frame):
         self._campo(form, "Bairro:", self.bairro_var, 1, 2, width=27)
 
         separador = tk.Frame(main_card, bg="#e5e7eb", height=1)
-        separador.pack(fill="x", padx=22, pady=(0, 12))
+        separador.pack(fill="x", padx=22, pady=(0, 7))
 
         # =========================
         # VEÍCULOS DO CLIENTE
@@ -512,7 +512,7 @@ class ClientsFrame(tk.Frame):
             activeforeground="white",
             bd=0,
             padx=16,
-            pady=7,
+            pady=5,
             font=("Segoe UI", 10, "bold"),
             command=self.add_client,
         ).pack(side="left", padx=(0, 22))
@@ -526,7 +526,7 @@ class ClientsFrame(tk.Frame):
             activeforeground="white",
             bd=0,
             padx=16,
-            pady=7,
+            pady=5,
             font=("Segoe UI", 10, "bold"),
             command=self.open_search_client_dialog,
         ).pack(side="left", padx=(0, 22))
@@ -540,7 +540,7 @@ class ClientsFrame(tk.Frame):
             activeforeground="white",
             bd=0,
             padx=16,
-            pady=7,
+            pady=5,
             font=("Segoe UI", 10, "bold"),
             command=self.open_delete_client_search,
         ).pack(side="left", padx=(0, 22))
@@ -554,7 +554,7 @@ class ClientsFrame(tk.Frame):
             activeforeground="white",
             bd=0,
             padx=16,
-            pady=7,
+            pady=5,
             font=("Segoe UI", 10, "bold"),
             command=self.limpar_tela_cliente,
         ).pack(side="left")
@@ -1342,7 +1342,7 @@ class SearchClientDialog(tk.Toplevel):
             font=("Segoe UI", 10),
             justify="center"
         )
-        self.search_entry.pack(pady=(0, 12), ipady=3)
+        self.search_entry.pack(pady=(0, 7), ipady=3)
         self.search_entry.focus_set()
 
         tk.Button(
@@ -1354,7 +1354,7 @@ class SearchClientDialog(tk.Toplevel):
             activeforeground="white",
             bd=0,
             padx=18,
-            pady=7,
+            pady=5,
             font=("Segoe UI", 10, "bold"),
             command=self.buscar_cliente
         ).pack()
@@ -1460,7 +1460,7 @@ class EditClientSearchDialog(tk.Toplevel):
             font=("Segoe UI", 10),
             justify="center"
         )
-        self.search_entry.pack(pady=(0, 12), ipady=3)
+        self.search_entry.pack(pady=(0, 7), ipady=3)
         self.search_entry.focus_set()
 
         tk.Button(
@@ -1552,7 +1552,7 @@ class EditClientDataDialog(tk.Toplevel):
             bg="#f5f6f8",
             fg="#0f172a",
             font=("Segoe UI", 13, "bold")
-        ).grid(row=0, column=0, columnspan=2, pady=(0, 12))
+        ).grid(row=0, column=0, columnspan=2, pady=(0, 7))
 
         campos = [
             ("CPF:", self.cpf_var),
@@ -1574,7 +1574,7 @@ class EditClientDataDialog(tk.Toplevel):
             tk.Entry(
                 frame,
                 textvariable=var,
-                width=38,
+                width=34,
                 font=("Segoe UI", 10)
             ).grid(row=i, column=1, padx=(12, 0), pady=6, ipady=3)
 
@@ -1590,7 +1590,7 @@ class EditClientDataDialog(tk.Toplevel):
             activeforeground="white",
             font=("Segoe UI", 10, "bold"),
             padx=14,
-            pady=7,
+            pady=5,
             bd=0,
             command=self.salvar_alteracoes
         ).pack(side="left", padx=6)
@@ -1728,7 +1728,7 @@ class DeleteClientSearchDialog(tk.Toplevel):
             font=("Segoe UI", 10),
             justify="center"
         )
-        self.search_entry.pack(pady=(0, 12), ipady=3)
+        self.search_entry.pack(pady=(0, 7), ipady=3)
         self.search_entry.focus_set()
 
         tk.Button(
@@ -1740,7 +1740,7 @@ class DeleteClientSearchDialog(tk.Toplevel):
             activeforeground="white",
             bd=0,
             padx=18,
-            pady=7,
+            pady=5,
             font=("Segoe UI", 10, "bold"),
             command=self.buscar_cliente
         ).pack()
@@ -2211,7 +2211,7 @@ class OrcamentoPreview(tk.Toplevel):
             fg="white",
             font=("Segoe UI", 10, "bold"),
             padx=14,
-            pady=8,
+            pady=5,
             bd=0,
             command=self.enviar_para_cliente
         ).pack(side="left", padx=(0, 10))
@@ -2223,7 +2223,7 @@ class OrcamentoPreview(tk.Toplevel):
             fg="white",
             font=("Segoe UI", 10, "bold"),
             padx=14,
-            pady=8,
+            pady=5,
             bd=0,
             command=self.imprimir_orcamento
         ).pack(side="left", padx=(0, 10))
@@ -2235,7 +2235,7 @@ class OrcamentoPreview(tk.Toplevel):
             fg="white",
             font=("Segoe UI", 10, "bold"),
             padx=14,
-            pady=8,
+            pady=5,
             bd=0,
             command=self.destroy
         ).pack(side="left")
@@ -2501,692 +2501,412 @@ class OrcamentoPreview(tk.Toplevel):
 
 class ServicesFrame(tk.Frame):
     def __init__(self, parent, app):
-        super().__init__(parent, bg="#f5f6f8")
+        super().__init__(parent, bg="#f3f4f6")
         self.app = app
-        self.selected_client_id = None
-        self._resultados_busca = []
 
-        # estado atual do orçamento
-        self.orcamento_cliente_nome = ""
-        self.orcamento_cliente_veiculo = ""
-        self.orcamento_cliente_tipo = ""   # "novo" ou "existente"
-
-        top = tk.Frame(self, bg="#f5f6f8")
-        top.pack(fill="x")
-        tk.Label(
-            top,
-            text="ORÇAMENTO",
-            bg="#f5f6f8",
-            fg="#1f2a37",
-            font=("Segoe UI", 18, "bold"),
-        ).pack(side="left")
-
-        style = ttk.Style()
-        style.theme_use("clam")
-        style.configure(
-            "Services.Treeview",
-            background="white",
-            foreground="black",
-            fieldbackground="white",
-            rowheight=24,
-        )
-        style.configure(
-            "Services.Treeview.Heading",
-            background="#f3f4f6",
-            foreground="#1f2937",
-        )
-
-        # ================================
-        # CAMPOS DO ORÇAMENTO (CLIENTE NOVO)
-        # ================================
-        campos_orcamento = tk.Frame(self, bg="#f5f6f8")
-        campos_orcamento.pack(anchor="w", pady=(8, 6))
-
+        # =========================
+        # VARIÁVEIS DA NOVA TELA
+        # =========================
         self.nome_orcamento_var = tk.StringVar()
         self.veiculo_orcamento_var = tk.StringVar()
+        self.cliente_vinculado_var = tk.StringVar(value="nenhum")
+        self.busca_placa_var = tk.StringVar()
+        self.mao_obra_var = tk.StringVar()
+        self.total_pecas_var = tk.StringVar(value="R$ 0,00")
+        self.total_servicos_var = tk.StringVar(value="R$ 0,00")
 
         self.nome_orcamento_var.trace_add(
-             "write", lambda *args: self._maiusculo_var(self.nome_orcamento_var)
+            "write", lambda *args: self._maiusculo_var(self.nome_orcamento_var)
         )
-
         self.veiculo_orcamento_var.trace_add(
             "write", lambda *args: self._maiusculo_var(self.veiculo_orcamento_var)
-        ) 
+        )
 
-        tk.Label(
-            campos_orcamento,
-            text="Cliente novo (preencha abaixo):",
-            bg="#f5f6f8",
-            fg="#b45309",
+        # =========================
+        # ESTILO DA TABELA
+        # =========================
+        style = ttk.Style()
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+
+        style.configure(
+            "Orcamento.Treeview",
+            background="white",
+            foreground="#111827",
+            fieldbackground="white",
+            rowheight=26,
+            bordercolor="#cbd5e1",
+            borderwidth=1,
+            relief="solid",
+            font=("Segoe UI", 10),
+        )
+        style.configure(
+            "Orcamento.Treeview.Heading",
+            background="#f3f4f6",
+            foreground="#111827",
+            bordercolor="#cbd5e1",
+            borderwidth=1,
+            relief="solid",
             font=("Segoe UI", 10, "bold"),
-        ).grid(row=0, column=0, columnspan=2, sticky="w", pady=(0, 6))
+        )
+        style.map(
+            "Orcamento.Treeview",
+            background=[("selected", "#dbeafe")],
+            foreground=[("selected", "#111827")],
+        )
+
+        # =========================
+        # CONTAINER PRINCIPAL
+        # =========================
+        container = tk.Frame(self, bg="#f3f4f6")
+        container.pack(fill="both", expand=True, padx=12, pady=6)
 
         tk.Label(
-            campos_orcamento,
+            container,
+            text="📄  ORÇAMENTO",
+            bg="#f3f4f6",
+            fg="#0b63ce",
+            font=("Segoe UI", 18, "bold"),
+        ).pack(anchor="w", pady=(0, 5))
+
+        # =========================
+        # CARD DADOS DO CLIENTE
+        # =========================
+        cliente_card = tk.Frame(
+            container,
+            bg="white",
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+            height=118,
+        )
+        cliente_card.pack(fill="x", pady=(0, 8))
+        cliente_card.pack_propagate(False)
+
+        tk.Label(
+            cliente_card,
+            text="👤  DADOS DO CLIENTE",
+            bg="white",
+            fg="#0b63ce",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w", padx=16, pady=(7, 4))
+
+        cliente_body = tk.Frame(cliente_card, bg="white")
+        cliente_body.pack(fill="both", expand=True, padx=16, pady=(0, 6))
+
+        form_cliente = tk.Frame(cliente_body, bg="white")
+        form_cliente.pack(side="left", anchor="n")
+
+        tk.Label(
+            form_cliente,
             text="Nome:",
-            bg="#f5f6f8",
-            fg="#374151",
+            bg="white",
+            fg="#111827",
             font=("Segoe UI", 10, "bold"),
-        ).grid(row=1, column=0, sticky="w", padx=(0, 8), pady=(0, 6))
+        ).grid(row=0, column=0, sticky="w", pady=(0, 4))
 
         tk.Entry(
-            campos_orcamento,
+            form_cliente,
             textvariable=self.nome_orcamento_var,
+            width=34,
             font=("Segoe UI", 10),
-            width=35,
-        ).grid(row=1, column=1, sticky="w", pady=(0, 6))
+            relief="solid",
+            bd=1,
+        ).grid(row=0, column=1, padx=(10, 0), pady=(0, 4), ipady=3)
 
         tk.Label(
-            campos_orcamento,
+            form_cliente,
             text="Veículo:",
-            bg="#f5f6f8",
-            fg="#374151",
+            bg="white",
+            fg="#111827",
             font=("Segoe UI", 10, "bold"),
-        ).grid(row=2, column=0, sticky="w", padx=(0, 8))
+        ).grid(row=1, column=0, sticky="w", pady=(8, 0))
 
         tk.Entry(
-            campos_orcamento,
+            form_cliente,
             textvariable=self.veiculo_orcamento_var,
+            width=34,
             font=("Segoe UI", 10),
-            width=35,
-        ).grid(row=2, column=1, sticky="w")
+            relief="solid",
+            bd=1,
+        ).grid(row=1, column=1, padx=(10, 0), pady=(8, 0), ipady=3)
+
+        botoes_cliente = tk.Frame(cliente_body, bg="white")
+        botoes_cliente.pack(side="left", padx=(22, 0), anchor="n")
 
         tk.Button(
-            campos_orcamento,
-            text="Vincular Cliente Novo",
-            command=self.vincular_cliente_novo
-        ).grid(row=1, column=2, padx=(20, 0), pady=(0, 6))
-
-        tk.Button(
-            campos_orcamento,
-            text="Limpar Cliente",
-            command=self.limpar_cliente
-        ).grid(row=2, column=2, sticky="w", padx=(20, 0))
-
-        self.cliente_vinculado_var = tk.StringVar(value="Cliente vinculado: nenhum")
-        tk.Label(
-            self,
-            textvariable=self.cliente_vinculado_var,
-            bg="#f5f6f8",
-            fg="#1f2937",
-            font=("Segoe UI", 10, "bold")
-        ).pack(anchor="w", padx=10, pady=(4, 8))
-
-        cols = ("id", "quantity", "description", "price")
-        self.tree = ttk.Treeview(self, columns=cols, show="headings", style="Services.Treeview")
-        self.tree.tag_configure("linha1", background="white")
-        self.tree.tag_configure("linha2", background="#e6e6e6")
-        self.tree.heading("id", text="ID")
-        self.tree.column("id", width=0, stretch=False)
-        for c, t, w, a in [
-            ("quantity", "QUANTIDADE", 100, "center"),
-            ("description", "DESCRIÇÃO", 420, "center"),
-            ("price", "VALOR (R$)", 120, "center"),
-        ]:
-            self.tree.heading(c, text=t, anchor="center")
-            self.tree.column(c, width=w, anchor=a)
-        self.tree.pack(fill="both", expand=True, pady=10)
-
-        # ==============================
-        # LINHA 1 (BUSCA + BOTÕES)
-        # ==============================
-        linha1 = tk.Frame(self, bg="#f5f6f8")
-        linha1.pack(fill="x", pady=(5, 0))
-
-        tk.Label(
-            linha1,
-            text="Buscar por Placa:",
-            bg="#f5f6f8",
+            botoes_cliente,
+            text="🔗  Vincular Cliente Novo",
+            command=lambda: self._em_desenvolvimento("Vincular Cliente Novo"),
+            bg="white",
+            fg="#2563eb",
+            activebackground="#dbeafe",
+            activeforeground="#2563eb",
+            relief="solid",
+            bd=1,
+            padx=16,
+            pady=5,
             font=("Segoe UI", 10, "bold"),
-        ).pack(side="left", padx=(10, 5))
+        ).pack(fill="x", pady=(0, 10))
 
-        self.search_var = tk.StringVar()
-        self.search_plate = tk.Entry(
-            linha1,
-            textvariable=self.search_var,
+        tk.Button(
+            botoes_cliente,
+            text="🧹  Limpar Cliente",
+            command=self.limpar_cliente,
+            bg="#6b7280",
+            fg="white",
+            activebackground="#4b5563",
+            activeforeground="white",
+            bd=0,
+            padx=16,
+            pady=5,
+            font=("Segoe UI", 10, "bold"),
+        ).pack(fill="x")
+
+        cliente_info = tk.Frame(
+            cliente_body,
+            bg="#f8fafc",
+            highlightbackground="#e5e7eb",
+            highlightthickness=1,
+            width=255,
+            height=68,
+        )
+        cliente_info.pack(side="left", padx=(22, 0), anchor="n")
+        cliente_info.pack_propagate(False)
+
+        tk.Label(
+            cliente_info,
+            text="👥  Cliente vinculado:",
+            bg="#f8fafc",
+            fg="#2563eb",
+            font=("Segoe UI", 11, "bold"),
+        ).pack(pady=(10, 1))
+
+        tk.Label(
+            cliente_info,
+            textvariable=self.cliente_vinculado_var,
+            bg="#f8fafc",
+            fg="#111827",
+            font=("Segoe UI", 11, "bold"),
+            wraplength=235,
+        ).pack()
+
+        # =========================
+        # CARD ITENS
+        # =========================
+        itens_card = tk.Frame(
+            container,
+            bg="white",
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+        )
+        itens_card.pack(fill="both", expand=True, pady=(0, 8))
+
+        tk.Label(
+            itens_card,
+            text="🛒  ITENS DO ORÇAMENTO",
+            bg="white",
+            fg="#0b63ce",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w", padx=16, pady=(7, 5))
+
+        tabela_frame = tk.Frame(
+            itens_card,
+            bg="white",
+            highlightbackground="#cbd5e1",
+            highlightthickness=1,
+        )
+        tabela_frame.pack(fill="both", expand=True, padx=14, pady=(0, 5))
+
+        cols = ("quantidade", "descricao", "valor")
+        self.tree = ttk.Treeview(
+            tabela_frame,
+            columns=cols,
+            show="headings",
+            style="Orcamento.Treeview",
+            height=5,
+        )
+
+        colunas = [
+            ("quantidade", "QUANTIDADE", 150),
+            ("descricao", "DESCRIÇÃO", 560),
+            ("valor", "VALOR R$", 190),
+        ]
+
+        for coluna, titulo, largura in colunas:
+            self.tree.heading(coluna, text=titulo, anchor="center")
+            self.tree.column(coluna, width=largura, minwidth=110, anchor="center", stretch=True)
+
+        scrollbar = ttk.Scrollbar(
+            tabela_frame,
+            orient="vertical",
+            command=self.tree.yview,
+        )
+        self.tree.configure(yscrollcommand=scrollbar.set)
+
+        self.tree.pack(side="left", fill="both", expand=True)
+        scrollbar.pack(side="right", fill="y")
+
+        # =========================
+        # BOTÕES DE AÇÃO
+        # =========================
+        botoes = tk.Frame(container, bg="#f3f4f6")
+        botoes.pack(fill="x", padx=14, pady=(0, 5))
+
+        def criar_botao(texto, cor, comando, largura):
+            return tk.Button(
+                botoes,
+                text=texto,
+                command=comando,
+                bg=cor,
+                fg="white",
+                activeforeground="white",
+                bd=0,
+                width=largura,
+                padx=8,
+                pady=5,
+                font=("Segoe UI", 10, "bold"),
+            )
+
+        criar_botao(
+            "➕  Adicionar",
+            "#08803a",
+            lambda: self._em_desenvolvimento("Adicionar item"),
+            13,
+        ).pack(side="left", padx=(0, 14))
+
+        criar_botao(
+            "✏  Editar",
+            "#0b63ce",
+            lambda: self._em_desenvolvimento("Editar item"),
+            12,
+        ).pack(side="left", padx=(0, 14))
+
+        criar_botao(
+            "🗑  Excluir",
+            "#ef233c",
+            lambda: self._em_desenvolvimento("Excluir item"),
+            12,
+        ).pack(side="left", padx=(0, 14))
+
+        criar_botao(
+            "📄  Criar Orçamento",
+            "#7b2cbf",
+            lambda: self._em_desenvolvimento("Criar orçamento"),
+            16,
+        ).pack(side="left")
+
+        # =========================
+        # RODAPÉ
+        # =========================
+        rodape = tk.Frame(
+            container,
+            bg="white",
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+            height=86,
+        )
+        rodape.pack(fill="x")
+        rodape.pack_propagate(False)
+
+        busca_box = tk.Frame(rodape, bg="white")
+        busca_box.pack(side="left", padx=16, pady=8)
+
+        tk.Label(
+            busca_box,
+            text="Buscar por Placa:",
+            bg="white",
+            font=("Segoe UI", 10, "bold"),
+        ).grid(row=0, column=0, sticky="w", pady=(0, 7))
+
+        tk.Entry(
+            busca_box,
+            textvariable=self.busca_placa_var,
             font=("Segoe UI", 10),
-            width=15,
-        )
-        self.search_plate.pack(side="left", padx=(0, 10))
-        self.search_var.trace_add("write", self._normalizar_busca_orcamento)
-
-        tk.Button(linha1, text="Adicionar", command=self.add_dialog).pack(side="left", padx=10)
-        tk.Button(linha1, text="Editar", command=self.edit_dialog).pack(side="left", padx=5)
-        tk.Button(linha1, text="Excluir", command=self.delete_selected).pack(side="left", padx=10)
-        tk.Button(linha1, text="CriarOrçamento", command=self.criar_orcamento_imagem).pack(side="left", padx=5)
-
-        # ==============================
-        # LINHA 2 (VALORES)
-        # ==============================
-        linha2 = tk.Frame(self, bg="#f5f6f8")
-        linha2.pack(fill="x", pady=(5, 10))
+            width=16,
+            relief="solid",
+            bd=1,
+        ).grid(row=0, column=1, padx=(10, 0), pady=(0, 7), ipady=2)
 
         tk.Label(
-            linha2,
+            busca_box,
             text="Mão de Obra:",
-            bg="#f5f6f8",
-            font=("Segoe UI", 10, "bold")
-        ).pack(side="left", padx=(10, 5))
+            bg="white",
+            font=("Segoe UI", 10, "bold"),
+        ).grid(row=1, column=0, sticky="w")
 
-        self.mao_obra_var = tk.StringVar()
-        self.mao_obra = tk.Entry(
-            linha2,
+        tk.Entry(
+            busca_box,
             textvariable=self.mao_obra_var,
-            width=10,
-            justify="center"
-        )
-        self.mao_obra.pack(side="left", padx=(0, 15))
-        self.mao_obra_var.trace_add("write", lambda *args: self.atualizar_totais())
+            width=16,
+            justify="center",
+            relief="solid",
+            bd=1,
+        ).grid(row=1, column=1, padx=(10, 0), ipady=2)
+
+        totais_box = tk.Frame(rodape, bg="white")
+        totais_box.pack(side="left", padx=(55, 0), pady=14)
 
         tk.Label(
-            linha2,
+            totais_box,
             text="Total de Peças:",
-            bg="#f5f6f8",
-            font=("Segoe UI", 10, "bold")
-        ).pack(side="left", padx=(10, 5))
-
-        self.total_pecas_var = tk.StringVar(value="R$ 0,00")
-        self.total_pecas = tk.Label(
-            linha2,
-            textvariable=self.total_pecas_var,
-            bg="#f5f6f8",
-            fg="#1f2937",
-            font=("Segoe UI", 11, "bold")
-        )
-        self.total_pecas.pack(side="left", padx=(0, 15))
+            bg="white",
+            font=("Segoe UI", 10, "bold"),
+        ).grid(row=0, column=0, padx=(0, 55))
 
         tk.Label(
-            linha2,
+            totais_box,
+            textvariable=self.total_pecas_var,
+            bg="white",
+            fg="#0b63ce",
+            font=("Segoe UI", 12, "bold"),
+        ).grid(row=1, column=0, padx=(0, 55))
+
+        tk.Label(
+            totais_box,
+            text="|",
+            bg="white",
+            fg="#9ca3af",
+            font=("Segoe UI", 18),
+        ).grid(row=0, column=1, rowspan=2, padx=(0, 55))
+
+        tk.Label(
+            totais_box,
             text="Total de Serviços:",
-            bg="#f5f6f8",
-            font=("Segoe UI", 10, "bold")
-        ).pack(side="left", padx=(10, 5))
+            bg="white",
+            font=("Segoe UI", 10, "bold"),
+        ).grid(row=0, column=2)
 
-        self.total_servicos = tk.Label(
-            linha2,
-            text="R$ 0,00",
-            bg="#f5f6f8",
+        tk.Label(
+            totais_box,
+            textvariable=self.total_servicos_var,
+            bg="white",
             fg="green",
-            font=("Segoe UI", 11, "bold")
-        )
-        self.total_servicos.pack(side="left")
-
-        self.sugestoes = tk.Listbox(self, height=4, font=("Segoe UI", 10))
-        self.sugestoes.pack(fill="x", padx=10, pady=(5, 0))
-        self.sugestoes.pack_forget()
-        self.sugestoes.bind("<<ListboxSelect>>", self.selecionar_sugestao)
+            font=("Segoe UI", 12, "bold"),
+        ).grid(row=1, column=2)
 
     def _maiusculo_var(self, var):
         texto = var.get()
         texto_maiusculo = texto.upper()
         if texto != texto_maiusculo:
-            var.set(texto_maiusculo)          
+            var.set(texto_maiusculo)
 
     def limpar_cliente(self):
-        # limpa cliente novo
         self.nome_orcamento_var.set("")
         self.veiculo_orcamento_var.set("")
+        self.cliente_vinculado_var.set("nenhum")
 
-        # limpa cliente existente
-        self.selected_client_id = None
-
-        # limpa busca
-        self.search_var.set("")
-        self.sugestoes.pack_forget()
-
-        # limpa cliente vinculado
-        self.orcamento_cliente_nome = ""
-        self.orcamento_cliente_veiculo = ""
-        self.orcamento_cliente_tipo = ""
-
-        # limpa ordem de serviço
-        for item in self.tree.get_children():
-         self.tree.delete(item)
-
-        # limpa mão de obra
-        self.mao_obra_var.set("") 
-
-        # atualiza label
-        self.atualizar_label_cliente()
-        self.atualizar_totais()     
-
-    def atualizar_label_cliente(self):
-        if self.orcamento_cliente_nome and self.orcamento_cliente_veiculo:
-            tipo = "Novo" if self.orcamento_cliente_tipo == "novo" else "Existente"
-            self.cliente_vinculado_var.set(
-                f"Cliente vinculado: {self.orcamento_cliente_nome} | "
-                f"Veículo: {self.orcamento_cliente_veiculo} | Tipo de Cliente: {tipo}"
-            )
-        else:
-            self.cliente_vinculado_var.set("Cliente vinculado: nenhum")
-
-    def vincular_cliente_novo(self):
-        nome = self.nome_orcamento_var.get().strip()
-        veiculo = self.veiculo_orcamento_var.get().strip()
-
-        if not nome:
-            messagebox.showwarning("Atenção", "Preencha o nome do cliente.")
-            return
-
-        if not veiculo:
-            messagebox.showwarning("Atenção", "Preencha o veículo.")
-            return
-
-        if self.selected_client_id:
-            messagebox.showwarning(
-                "Atenção",
-                "Já existe um cliente selecionado pela busca.\n"
-                "Limpe a busca antes de vincular um cliente novo."
-            )
-            return
-
-        self.orcamento_cliente_nome = nome
-        self.orcamento_cliente_veiculo = veiculo
-        self.orcamento_cliente_tipo = "novo"
-        self.atualizar_label_cliente()
-        messagebox.showinfo("Sucesso", "Cliente novo vinculado ao orçamento.")
-
-    def _normalizar_busca_orcamento(self, *args):
-        texto_atual = self.search_var.get()
-        texto_formatado = "".join(
-            caractere for caractere in texto_atual.upper()
-            if caractere.isalnum()
-        )[:7]
-
-        if texto_atual != texto_formatado:
-            self.search_var.set(texto_formatado)
-
-        self.after_idle(self.buscar_cliente)
-
-    def buscar_cliente(self):
-        termo_original = self.search_var.get().strip()
-        termo_placa = "".join(ch for ch in termo_original.upper() if ch.isalnum())
-
-        self.sugestoes.delete(0, tk.END)
-        self._resultados_busca = []
-
-        if not termo_placa:
-            self.sugestoes.pack_forget()
-            return
-
-        con = db()
-        cur = con.cursor()
-        cur.execute(
-            """
-            SELECT DISTINCT
-                c.id,
-                c.phone,
-                v.plate,
-                c.name,
-                v.vehicle
-            FROM clients c
-            INNER JOIN vehicles v ON v.client_id = c.id
-            WHERE UPPER(REPLACE(REPLACE(COALESCE(v.plate, ''), '-', ''), ' ', '')) LIKE ?
-            ORDER BY v.plate
-            LIMIT 10
-            """,
-            (f"{termo_placa}%",),
+    def _em_desenvolvimento(self, nome_funcao):
+        messagebox.showinfo(
+            "Função em desenvolvimento",
+            f"A função '{nome_funcao}' será criada na próxima etapa."
         )
-        resultados = cur.fetchall()
-        con.close()
-
-        if not resultados:
-            self.sugestoes.pack_forget()
-            return
-
-        self._resultados_busca = resultados
-        for client_id, telefone, plate, name, vehicle in resultados:
-            texto = (
-                f"TELEFONE: {telefone or '-'} | PLACA: {plate or '-'} | "
-                f"NOME: {name or '-'} | VEÍCULO: {vehicle or '-'}"
-            )
-            self.sugestoes.insert(tk.END, texto)
-
-        self.sugestoes.pack(fill="x", padx=10, pady=(5, 0))
-
-    def selecionar_sugestao(self, event=None):
-        selecao = self.sugestoes.curselection()
-        if not selecao:
-            return
-
-        indice = selecao[0]
-        if indice >= len(self._resultados_busca):
-            return
-
-        client_id, telefone, plate, name, vehicle = self._resultados_busca[indice]
-
-        self.selected_client_id = client_id
-        self.nome_orcamento_var.set(name or "")
-        self.veiculo_orcamento_var.set(vehicle or "")
-
-        self.orcamento_cliente_nome = name or ""
-        self.orcamento_cliente_veiculo = vehicle or ""
-        self.orcamento_cliente_tipo = "existente"
-
-        self.search_var.set("")
-        self.sugestoes.pack_forget()
-        self.atualizar_label_cliente()
-
-    def atualizar_totais(self):
-        total_pecas = 0.0
-
-        for item in self.tree.get_children():
-            valores = self.tree.item(item, "values")
-            if len(valores) >= 4:
-                valor_str = str(valores[3]).strip()
-                try:
-                    valor_str = valor_str.replace("R$", "").replace(" ", "")
-                    valor_str = valor_str.replace(".", "").replace(",", ".")
-                    preco = float(valor_str)
-                    total_pecas += preco
-                except Exception:
-                    pass
-
-        texto = self.mao_obra_var.get().strip()
-        try:
-            texto = texto.replace("R$", "").replace(" ", "")
-            texto = texto.replace(".", "").replace(",", ".")
-            mao_obra = float(texto) if texto else 0.0
-        except Exception:
-            mao_obra = 0.0
-
-        total_servicos = mao_obra + total_pecas
-        self.total_pecas_var.set(f"R$ {total_pecas:.2f}".replace(".", ","))
-        self.total_servicos.config(text=f"R$ {total_servicos:.2f}".replace(".", ","))
-
-    def _selected_id(self):
-        sel = self.tree.selection()
-        if not sel:
-            return None
-        return int(self.tree.item(sel[0], "values")[0])
-
-    def _proximo_id_tree(self):
-        maior = 0
-        for item in self.tree.get_children():
-            try:
-                atual = int(self.tree.item(item, "values")[0])
-                if atual > maior:
-                    maior = atual
-            except Exception:
-                pass
-        return maior + 1
-
-    def add_dialog(self):
-        if not self.orcamento_cliente_nome or not self.orcamento_cliente_veiculo:
-            messagebox.showwarning(
-                "Atenção",
-                "Vincule primeiro um cliente ao orçamento.\n\n"
-                "Use o botão 'Vincular Cliente Novo' ou selecione um cliente pela busca."
-            )
-            return
-
-        ServiceDialog(self, title="Adicionar Serviço", on_save=self._insert_manual)
-
-    def edit_dialog(self):
-        sid = self._selected_id()
-        if not sid:
-            messagebox.showwarning("Atenção", "Selecione um serviço.")
-            return
-
-        item_selecionado = self.tree.selection()[0]
-        valores = self.tree.item(item_selecionado, "values")
-        if len(valores) < 4:
-            messagebox.showwarning("Atenção", "Serviço inválido.")
-            return
-
-        initial = (
-            float(str(valores[1]).replace(",", ".")),
-            valores[2],
-            float(str(valores[3]).replace(".", "").replace(",", "."))
-        )
-
-        ServiceDialog(
-            self,
-            title="Editar Serviço",
-            initial=initial,
-            on_save=lambda data: self._update_manual(item_selecionado, sid, data),
-        )
-
-    def _insert_manual(self, data):
-        quantidade = float(data[0])
-
-        if quantidade.is_integer():
-           quantidade = int(quantidade)
-
-        descricao = data[1]
-        preco = float(data[2])
-
-        novo_id = self._proximo_id_tree()
-        tag = "linha1" if (len(self.tree.get_children()) % 2 == 0) else "linha2"
-
-        self.tree.insert(
-            "",
-            "end",
-            values=(
-                novo_id,
-                quantidade,
-                descricao,
-                f"{preco:.2f}".replace(".", ",")
-            ),
-            tags=(tag,),
-        )
-        self.atualizar_totais()
-
-    def _update_manual(self, item_id, sid, data):
-        quantidade = float(data[0])
-
-        if quantidade.is_integer():
-           quantidade = int(quantidade)
-
-        descricao = data[1]
-        preco = float(data[2])
-
-        tags = self.tree.item(item_id, "tags")
-        self.tree.item(
-            item_id,
-            values=(sid, quantidade, descricao, f"{preco:.2f}".replace(".", ",")),
-            tags=tags,
-        )
-        self.atualizar_totais()
-
-    def delete_selected(self):
-        sel = self.tree.selection()
-        if not sel:
-            messagebox.showwarning("Atenção", "Selecione um serviço.")
-            return
-
-        if not messagebox.askyesno(
-            "Confirmação",
-            "Tem certeza que deseja excluir este serviço?"
-        ):
-            return
-
-        for item in sel:
-            self.tree.delete(item)
-
-        self.atualizar_totais()
-
-    def criar_orcamento_imagem(self):
-        try:
-            nome_cliente = self.orcamento_cliente_nome.strip() or self.nome_orcamento_var.get().strip()
-            veiculo_cliente = self.orcamento_cliente_veiculo.strip() or self.veiculo_orcamento_var.get().strip()
-
-            if not nome_cliente:
-                messagebox.showwarning("Atenção", "Informe o nome do cliente.")
-                return
-
-            if not veiculo_cliente:
-                messagebox.showwarning("Atenção", "Informe o veículo do cliente.")
-                return
-
-            itens = []
-            for item_id in self.tree.get_children():
-                valores = self.tree.item(item_id, "values")
-                if len(valores) >= 4:
-                    quantidade = str(valores[1])
-                    descricao = str(valores[2])
-                    valor = str(valores[3])
-                    itens.append((quantidade, descricao, valor))
-
-            if not itens:
-                messagebox.showwarning("Atenção", "Adicione pelo menos um serviço ao orçamento.")
-                return
-
-            nome_oficina = "Juliano Automecânica"
-            data_atual = datetime.now().strftime("%d/%m/%Y")
-            hora_arquivo = datetime.now().strftime("%d-%m-%Y")
-
-            mao_de_obra = self.mao_obra_var.get().strip() or "0,00"
-            total_pecas = self.total_pecas_var.get().strip() or "R$ 0,00"
-            total_servicos = self.total_servicos.cget("text").strip() or "R$ 0,00"
-
-            largura = 1000
-            altura = 1400
-            margem = 50
-
-            img = Image.new("RGB", (largura, altura), "white")
-            draw = ImageDraw.Draw(img)
-
-            try:
-                fonte_titulo = ImageFont.truetype("arial.ttf", 42)
-                fonte_subtitulo = ImageFont.truetype("arial.ttf", 28)
-                fonte_texto = ImageFont.truetype("arial.ttf", 24)
-                fonte_negrito = ImageFont.truetype("arialbd.ttf", 24)
-                fonte_pequena = ImageFont.truetype("arial.ttf", 20)
-            except Exception:
-                fonte_titulo = ImageFont.load_default()
-                fonte_subtitulo = ImageFont.load_default()
-                fonte_texto = ImageFont.load_default()
-                fonte_negrito = ImageFont.load_default()
-                fonte_pequena = ImageFont.load_default()
-
-            y = margem
-
-            logo_path = LOGO_PATH
-            if os.path.exists(logo_path):
-                try:
-                    logo = Image.open(logo_path).convert("RGBA")
-                    logo.thumbnail((140, 140))
-                    img.paste(logo, (margem, y), logo)
-                except Exception:
-                    pass
-
-            draw.text((220, y + 20), nome_oficina, fill="black", font=fonte_titulo)
-            draw.text((220, y + 80), "ORÇAMENTO", fill="black", font=fonte_subtitulo)
-
-            y += 170
-            draw.line((margem, y, largura - margem, y), fill="black", width=2)
-            y += 30
-
-            draw.text((margem, y), f"Data: {data_atual}", fill="black", font=fonte_negrito)
-            y += 45
-            draw.text((margem, y), f"Cliente: {nome_cliente}", fill="black", font=fonte_texto)
-            y += 40
-            draw.text((margem, y), f"Veículo: {veiculo_cliente}", fill="black", font=fonte_texto)
-            y += 50
-
-            draw.line((margem, y, largura - margem, y), fill="gray", width=1)
-            y += 25
-
-            x_qtd = margem
-            x_desc = 180
-            x_valor = 800
-
-            # Centraliza o título DESCRIÇÃO entre QTD e VALOR
-            texto_desc = "DESCRIÇÃO"
-            bbox_desc = draw.textbbox((0, 0), texto_desc, font=fonte_negrito)
-            largura_desc = bbox_desc[2] - bbox_desc[0]
-
-            inicio_coluna_desc = 180
-            fim_coluna_desc = 760
-            x_desc_titulo = inicio_coluna_desc + ((fim_coluna_desc - inicio_coluna_desc - largura_desc) // 2)
-
-            draw.text((x_qtd, y), "QUANTIDADE", fill="black", font=fonte_negrito)
-            draw.text((x_desc_titulo, y), texto_desc, fill="black", font=fonte_negrito)
-            draw.text((x_valor, y), "VALOR", fill="black", font=fonte_negrito)
-            y += 35
-
-            draw.line((margem, y, largura - margem, y), fill="black", width=1)
-            y += 20
-
-            for qtd, descricao, valor in itens:
-                draw.text((x_qtd, y), qtd, fill="black", font=fonte_texto)
-                draw.text((x_desc, y), descricao, fill="black", font=fonte_texto)
-                draw.text((x_valor, y), f"R$ {valor}", fill="black", font=fonte_texto)
-                y += 35
-
-                if y > altura - 250:
-                    break
-
-            y += 20
-            draw.line((margem, y, largura - margem, y), fill="gray", width=1)
-            y += 30
-
-            mao_de_obra_formatado = mao_de_obra
-            if not mao_de_obra_formatado.startswith("R$"):
-                mao_de_obra_formatado = f"R$ {mao_de_obra_formatado}"
-
-            draw.text((margem, y), f"Mão de Obra: {mao_de_obra_formatado}", fill="black", font=fonte_texto)
-            y += 40
-            draw.text((margem, y), f"Total de Peças: {total_pecas}", fill="black", font=fonte_texto)
-            y += 40
-            draw.text((margem, y), f"Total de Serviços: {total_servicos}", fill="black", font=fonte_negrito)
-            y += 70
-
-            draw.line((margem, y, largura - margem, y), fill="black", width=1)
-            y += 25
-            draw.text((margem, y), "Obrigado pela preferência!", fill="black", font=fonte_pequena)
-
-            pasta_saida = "orcamentos"
-            os.makedirs(pasta_saida, exist_ok=True)
-
-            nome_limpo = "".join(c for c in nome_cliente if c.isalnum() or c in (" ", "_", "-")).strip()
-            nome_limpo = nome_limpo.replace(" ", "_").upper()
-
-            veiculo_limpo = "".join(c for c in veiculo_cliente if c.isalnum() or c in (" ", "_", "-")).strip()
-            veiculo_limpo = veiculo_limpo.replace(" ", "_").upper()
-
-            nome_base = f"{nome_limpo}_{veiculo_limpo}"
-            nome_arquivo = f"{nome_base}.png"
-            caminho_saida = os.path.join(pasta_saida, nome_arquivo)
-
-            contador = 2
-            while os.path.exists(caminho_saida):
-                nome_arquivo = f"{nome_base}_{contador}.png"
-                caminho_saida = os.path.join(pasta_saida, nome_arquivo)
-                contador += 1
-
-            img.save(caminho_saida)
-
-            telefone_cliente = ""
-
-            if self.orcamento_cliente_tipo == "existente" and self.selected_client_id:
-                con = db()
-                cur = con.cursor()
-                cur.execute("SELECT phone FROM clients WHERE id = ?", (self.selected_client_id,))
-                row = cur.fetchone()
-                con.close()
-
-                if row and row[0]:
-                    telefone_cliente = row[0]
-
-            OrcamentoPreview(
-                self,
-                caminho_imagem=caminho_saida,
-                nome_cliente=nome_cliente,
-                telefone=telefone_cliente,
-                veiculo=veiculo_cliente,
-                mao_de_obra=mao_de_obra_formatado,
-                total_pecas=total_pecas,
-                total_servicos=total_servicos,
-            )
-
-        except Exception as e:
-            messagebox.showerror("Erro", f"Erro ao criar orçamento:\n{e}")
 
     def refresh(self):
-        self.atualizar_label_cliente()
-        self.atualizar_totais()
+        pass
+
+
 
 class OrdemServicoFrame(tk.Frame):
     def __init__(self, parent, app):
@@ -3253,7 +2973,7 @@ class OrdemServicoFrame(tk.Frame):
             self.tree.heading(c, text=t, anchor="center")
             self.tree.column(c, width=w, anchor=a)
 
-        self.tree.pack(fill="both", expand=True, padx=10, pady=(0, 12))
+        self.tree.pack(fill="both", expand=True, padx=10, pady=(0, 7))
 
         linha1 = tk.Frame(container, bg="#f5f6f8")
         linha1.pack(fill="x", padx=10, pady=(0, 8))
@@ -3286,7 +3006,7 @@ class OrdemServicoFrame(tk.Frame):
         self.sugestoes.bind("<<ListboxSelect>>", self.selecionar_sugestao)
 
         linha2 = tk.Frame(container, bg="#f5f6f8")
-        linha2.pack(fill="x", padx=10, pady=(0, 12))
+        linha2.pack(fill="x", padx=10, pady=(0, 7))
 
         tk.Label(
             linha2,
