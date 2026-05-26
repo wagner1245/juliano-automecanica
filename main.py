@@ -2638,7 +2638,7 @@ class ServicesFrame(tk.Frame):
         tk.Button(
             botoes_cliente,
             text="🔗  Vincular Cliente Novo",
-            command=lambda: self._em_desenvolvimento("Vincular Cliente Novo"),
+            command=self.vincular_cliente_visual,
             bg="white",
             fg="#2563eb",
             activebackground="#dbeafe",
@@ -2891,6 +2891,20 @@ class ServicesFrame(tk.Frame):
         texto_maiusculo = texto.upper()
         if texto != texto_maiusculo:
             var.set(texto_maiusculo)
+
+    def vincular_cliente_visual(self):
+        nome = self.nome_orcamento_var.get().strip()
+        veiculo = self.veiculo_orcamento_var.get().strip()
+
+        if not nome:
+            messagebox.showwarning("Atenção", "Informe o nome do cliente.")
+            return
+
+        if not veiculo:
+            messagebox.showwarning("Atenção", "Informe o veículo do cliente.")
+            return
+
+        self.cliente_vinculado_var.set(f"{nome} - {veiculo}")
 
     def limpar_cliente(self):
         self.nome_orcamento_var.set("")
