@@ -2514,6 +2514,7 @@ class ServicesFrame(tk.Frame):
         self.mao_obra_var = tk.StringVar()
         self.total_pecas_var = tk.StringVar(value="R$ 0,00")
         self.total_servicos_var = tk.StringVar(value="R$ 0,00")
+        self._editor_tabela = None
 
         self.nome_orcamento_var.trace_add(
             "write", lambda *args: self._maiusculo_var(self.nome_orcamento_var)
@@ -2748,6 +2749,11 @@ class ServicesFrame(tk.Frame):
         self.tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
+        for _ in range(5):
+            self.tree.insert("", "end", values=("", "", ""))
+
+        self.tree.bind("<Double-1>", self.editar_celula_tabela)
+
         # =========================
         # BOTÕES DE AÇÃO
         # =========================
@@ -2910,6 +2916,84 @@ class ServicesFrame(tk.Frame):
         self.nome_orcamento_var.set("")
         self.veiculo_orcamento_var.set("")
         self.cliente_vinculado_var.set("nenhum")
+
+    def editar_celula_tabela(self, event):
+        item = self.tree.identify_row(event.y)
+        coluna = self.tree.identify_column(event.x)
+
+        if not item or not coluna:
+            return
+
+        self.finalizar_edicao_tabela()
+
+        indice_coluna = int(coluna.replace("#", "")) - 1
+        colunas_editaveis = ("quantidade", "descricao", "valor")
+
+        if indice_coluna < 0 or indice_coluna >= len(colunas_editaveis):
+            return
+
+        bbox = self.tree.bbox(item, coluna)
+
+        if not bbox:
+            return
+
+        x, y, largura, altura = bbox
+        valores = list(self.tree.item(item, "values"))
+
+        while len(valores) < 3:
+            valores.append("")
+
+        valor_atual = valores[indice_coluna]
+
+        entrada_var = tk.StringVar(value=valor_atual)
+
+        entrada = tk.Entry(
+            self.tree,
+            textvariable=entrada_var,
+            font=("Segoe UI", 10),
+            relief="solid",
+            bd=1,
+        )
+        entrada.place(x=x, y=y, width=largura, height=altura)
+        entrada.focus_set()
+        entrada.select_range(0, tk.END)
+
+        self._editor_tabela = {
+            "entry": entrada,
+            "item": item,
+            "indice_coluna": indice_coluna,
+        }
+
+        entrada.bind("<Return>", lambda e: self.finalizar_edicao_tabela())
+        entrada.bind("<FocusOut>", lambda e: self.finalizar_edicao_tabela())
+
+    def finalizar_edicao_tabela(self):
+        if not self._editor_tabela:
+            return
+
+        entrada = self._editor_tabela.get("entry")
+        item = self._editor_tabela.get("item")
+        indice_coluna = self._editor_tabela.get("indice_coluna")
+
+        if not entrada or not entrada.winfo_exists():
+            self._editor_tabela = None
+            return
+
+        valores = list(self.tree.item(item, "values"))
+
+        while len(valores) < 3:
+            valores.append("")
+
+        novo_valor = entrada.get().strip()
+
+        if indice_coluna == 1:
+            novo_valor = novo_valor.upper()
+
+        valores[indice_coluna] = novo_valor
+        self.tree.item(item, values=valores)
+
+        entrada.destroy()
+        self._editor_tabela = None
 
     def validar_cliente_antes_adicionar(self):
         cliente_vinculado = self.cliente_vinculado_var.get().strip()
