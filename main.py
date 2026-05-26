@@ -871,6 +871,80 @@ class ClientsFrame(tk.Frame):
 
         return veiculos
 
+    def _normalizar_placa_comparacao(self, valor):
+        return "".join(ch for ch in str(valor or "").upper() if ch.isalnum())
+
+    def _validar_placas_duplicadas(self, veiculos, cliente_id_ignorar=None):
+        placas_digitadas = {}
+
+        for placa, veiculo, cor, ano, km in veiculos:
+            placa_normalizada = self._normalizar_placa_comparacao(placa)
+
+            if not placa_normalizada:
+                continue
+
+            if placa_normalizada in placas_digitadas:
+                messagebox.showwarning(
+                    "Atenção",
+                    f"A placa {self._formatar_placa(placa_normalizada)} foi digitada mais de uma vez na tabela."
+                )
+                return False
+
+            placas_digitadas[placa_normalizada] = placa
+
+        if not placas_digitadas:
+            return True
+
+        try:
+            con = db()
+            cur = con.cursor()
+
+            for placa_normalizada in placas_digitadas:
+                if cliente_id_ignorar:
+                    cur.execute(
+                        """
+                        SELECT c.name
+                        FROM vehicles v
+                        LEFT JOIN clients c ON c.id = v.client_id
+                        WHERE UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) = ?
+                          AND v.client_id <> ?
+                        LIMIT 1
+                        """,
+                        (placa_normalizada, cliente_id_ignorar),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT c.name
+                        FROM vehicles v
+                        LEFT JOIN clients c ON c.id = v.client_id
+                        WHERE UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) = ?
+                        LIMIT 1
+                        """,
+                        (placa_normalizada,),
+                    )
+
+                cliente = cur.fetchone()
+
+                if cliente:
+                    nome_cliente = cliente[0] or "outro cliente"
+                    con.close()
+                    messagebox.showwarning(
+                        "Atenção",
+                        f"A placa {self._formatar_placa(placa_normalizada)} já está cadastrada para {nome_cliente}."
+                    )
+                    return False
+
+            con.close()
+            return True
+
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Não foi possível verificar placa duplicada:\n{e}"
+            )
+            return False
+
     def _limpar_campos_cliente(self):
         if hasattr(self, "cpf_entry"):
             self.cpf_entry.config(state="normal")
@@ -933,8 +1007,22 @@ class ClientsFrame(tk.Frame):
             )
             return
 
+        if not self._validar_placas_duplicadas(veiculos_para_salvar):
+            return
+
         con = db()
         cur = con.cursor()
+
+        cur.execute("SELECT name FROM clients WHERE cpf = ? LIMIT 1", (dados["cpf"],))
+        cliente_cpf = cur.fetchone()
+        if cliente_cpf:
+            con.close()
+            nome_cliente = cliente_cpf[0] or "outro cliente"
+            messagebox.showwarning(
+                "Atenção",
+                f"Este CPF já está cadastrado para {nome_cliente}."
+            )
+            return
 
         if dados["phone"]:
             cur.execute("SELECT id FROM clients WHERE phone = ?", (dados["phone"],))
@@ -1018,6 +1106,12 @@ class ClientsFrame(tk.Frame):
             messagebox.showwarning("Atenção", "Informe pelo menos um veículo na tabela.")
             return
 
+        if not self._validar_placas_duplicadas(
+            veiculos_atuais,
+            cliente_id_ignorar=self.cliente_carregado_id
+        ):
+            return
+
         dados_comparacao = {
             "cpf": dados["cpf"],
             "name": dados["name"],
@@ -1036,6 +1130,20 @@ class ClientsFrame(tk.Frame):
 
         con = db()
         cur = con.cursor()
+
+        cur.execute(
+            "SELECT name FROM clients WHERE cpf = ? AND id <> ? LIMIT 1",
+            (dados["cpf"], self.cliente_carregado_id),
+        )
+        cliente_cpf = cur.fetchone()
+        if cliente_cpf:
+            con.close()
+            nome_cliente = cliente_cpf[0] or "outro cliente"
+            messagebox.showwarning(
+                "Atenção",
+                f"Este CPF já pertence a {nome_cliente}."
+            )
+            return
 
         if dados["phone"]:
             cur.execute(
@@ -3035,8 +3143,10 @@ class ServicesFrame(tk.Frame):
             nome_limpo = "".join(c for c in nome_cliente if c.isalnum() or c in (" ", "_", "-")).strip()
             nome_limpo = nome_limpo.replace(" ", "_").upper()
 
-            data_arquivo = datetime.now().strftime("%d-%m-%Y")
-            nome_base = f"{data_arquivo}_{nome_limpo}"
+            veiculo_limpo = "".join(c for c in veiculo_cliente if c.isalnum() or c in (" ", "_", "-")).strip()
+            veiculo_limpo = veiculo_limpo.replace(" ", "_").upper()
+
+            nome_base = f"{nome_limpo}_{veiculo_limpo}"
             nome_arquivo = f"{nome_base}.png"
             caminho_saida = os.path.join(pasta_saida, nome_arquivo)
 
