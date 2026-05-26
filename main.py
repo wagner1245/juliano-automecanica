@@ -2772,7 +2772,7 @@ class ServicesFrame(tk.Frame):
         criar_botao(
             "➕  Adicionar",
             "#08803a",
-            lambda: self._em_desenvolvimento("Adicionar item"),
+            self.validar_cliente_antes_adicionar,
             13,
         ).pack(side="left", padx=(0, 14))
 
@@ -2910,6 +2910,18 @@ class ServicesFrame(tk.Frame):
         self.nome_orcamento_var.set("")
         self.veiculo_orcamento_var.set("")
         self.cliente_vinculado_var.set("nenhum")
+
+    def validar_cliente_antes_adicionar(self):
+        cliente_vinculado = self.cliente_vinculado_var.get().strip()
+
+        if not cliente_vinculado or cliente_vinculado.lower() == "nenhum":
+            messagebox.showwarning(
+                "Atenção",
+                "Vincule um cliente antes de adicionar itens ao orçamento."
+            )
+            return
+
+        self._em_desenvolvimento("Adicionar item")
 
     def _em_desenvolvimento(self, nome_funcao):
         messagebox.showinfo(
