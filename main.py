@@ -2514,7 +2514,6 @@ class ServicesFrame(tk.Frame):
         self.mao_obra_var = tk.StringVar()
         self.total_pecas_var = tk.StringVar(value="R$ 0,00")
         self.total_servicos_var = tk.StringVar(value="R$ 0,00")
-        self._editor_tabela = None
 
         self.nome_orcamento_var.trace_add(
             "write", lambda *args: self._maiusculo_var(self.nome_orcamento_var)
@@ -2749,11 +2748,6 @@ class ServicesFrame(tk.Frame):
         self.tree.pack(side="left", fill="both", expand=True)
         scrollbar.pack(side="right", fill="y")
 
-        for _ in range(5):
-            self.tree.insert("", "end", values=("", "", ""))
-
-        self.tree.bind("<Double-1>", self.editar_celula_tabela)
-
         # =========================
         # BOTÕES DE AÇÃO
         # =========================
@@ -2917,85 +2911,10 @@ class ServicesFrame(tk.Frame):
         self.veiculo_orcamento_var.set("")
         self.cliente_vinculado_var.set("nenhum")
 
-    def editar_celula_tabela(self, event):
-        item = self.tree.identify_row(event.y)
-        coluna = self.tree.identify_column(event.x)
-
-        if not item or not coluna:
-            return
-
-        self.finalizar_edicao_tabela()
-
-        indice_coluna = int(coluna.replace("#", "")) - 1
-        colunas_editaveis = ("quantidade", "descricao", "valor")
-
-        if indice_coluna < 0 or indice_coluna >= len(colunas_editaveis):
-            return
-
-        bbox = self.tree.bbox(item, coluna)
-
-        if not bbox:
-            return
-
-        x, y, largura, altura = bbox
-        valores = list(self.tree.item(item, "values"))
-
-        while len(valores) < 3:
-            valores.append("")
-
-        valor_atual = valores[indice_coluna]
-
-        entrada_var = tk.StringVar(value=valor_atual)
-
-        entrada = tk.Entry(
-            self.tree,
-            textvariable=entrada_var,
-            font=("Segoe UI", 10),
-            relief="solid",
-            bd=1,
-        )
-        entrada.place(x=x, y=y, width=largura, height=altura)
-        entrada.focus_set()
-        entrada.select_range(0, tk.END)
-
-        self._editor_tabela = {
-            "entry": entrada,
-            "item": item,
-            "indice_coluna": indice_coluna,
-        }
-
-        entrada.bind("<Return>", lambda e: self.finalizar_edicao_tabela())
-        entrada.bind("<FocusOut>", lambda e: self.finalizar_edicao_tabela())
-
-    def finalizar_edicao_tabela(self):
-        if not self._editor_tabela:
-            return
-
-        entrada = self._editor_tabela.get("entry")
-        item = self._editor_tabela.get("item")
-        indice_coluna = self._editor_tabela.get("indice_coluna")
-
-        if not entrada or not entrada.winfo_exists():
-            self._editor_tabela = None
-            return
-
-        valores = list(self.tree.item(item, "values"))
-
-        while len(valores) < 3:
-            valores.append("")
-
-        novo_valor = entrada.get().strip()
-
-        if indice_coluna == 1:
-            novo_valor = novo_valor.upper()
-
-        valores[indice_coluna] = novo_valor
-        self.tree.item(item, values=valores)
-
-        entrada.destroy()
-        self._editor_tabela = None
-
     def validar_cliente_antes_adicionar(self):
+        self.abrir_janela_adicionar_item()
+
+    def abrir_janela_adicionar_item(self):
         cliente_vinculado = self.cliente_vinculado_var.get().strip()
 
         if not cliente_vinculado or cliente_vinculado.lower() == "nenhum":
@@ -3005,7 +2924,117 @@ class ServicesFrame(tk.Frame):
             )
             return
 
-        self._em_desenvolvimento("Adicionar item")
+        janela = tk.Toplevel(self)
+        janela.title("Adicionar Item")
+        janela.configure(bg="#f5f6f8")
+        janela.resizable(False, False)
+        janela.grab_set()
+
+        frame = tk.Frame(janela, bg="#f5f6f8", padx=22, pady=18)
+        frame.pack(fill="both", expand=True)
+
+        tk.Label(
+            frame,
+            text="Adicionar item ao orçamento",
+            bg="#f5f6f8",
+            fg="#0b63ce",
+            font=("Segoe UI", 13, "bold"),
+        ).grid(row=0, column=0, columnspan=2, pady=(0, 14))
+
+        quantidade_var = tk.StringVar()
+        descricao_var = tk.StringVar()
+        valor_var = tk.StringVar()
+
+        descricao_var.trace_add("write", lambda *args: self._maiusculo_var(descricao_var))
+
+        campos = [
+            ("Quantidade:", quantidade_var),
+            ("Descrição:", descricao_var),
+            ("Valor R$:", valor_var),
+        ]
+
+        for i, (label, var) in enumerate(campos, start=1):
+            tk.Label(
+                frame,
+                text=label,
+                bg="#f5f6f8",
+                fg="#111827",
+                font=("Segoe UI", 10, "bold"),
+            ).grid(row=i, column=0, sticky="w", pady=6)
+
+            tk.Entry(
+                frame,
+                textvariable=var,
+                width=34,
+                font=("Segoe UI", 10),
+                relief="solid",
+                bd=1,
+            ).grid(row=i, column=1, padx=(12, 0), pady=6, ipady=3)
+
+        botoes = tk.Frame(frame, bg="#f5f6f8")
+        botoes.grid(row=4, column=0, columnspan=2, pady=(16, 0))
+
+        tk.Button(
+            botoes,
+            text="OK",
+            bg="#08803a",
+            fg="white",
+            activebackground="#06632d",
+            activeforeground="white",
+            bd=0,
+            padx=22,
+            pady=7,
+            font=("Segoe UI", 10, "bold"),
+            command=lambda: self.adicionar_item_tabela(
+                janela,
+                quantidade_var.get(),
+                descricao_var.get(),
+                valor_var.get(),
+            ),
+        ).pack(side="left", padx=6)
+
+        tk.Button(
+            botoes,
+            text="Cancelar",
+            bg="#6b7280",
+            fg="white",
+            activebackground="#4b5563",
+            activeforeground="white",
+            bd=0,
+            padx=18,
+            pady=7,
+            font=("Segoe UI", 10, "bold"),
+            command=janela.destroy,
+        ).pack(side="left", padx=6)
+
+        janela.update_idletasks()
+        largura = janela.winfo_width()
+        altura = janela.winfo_height()
+        sw = janela.winfo_screenwidth()
+        sh = janela.winfo_screenheight()
+        x = (sw // 2) - (largura // 2)
+        y = (sh // 2) - (altura // 2)
+        janela.geometry(f"+{x}+{y}")
+
+    def adicionar_item_tabela(self, janela, quantidade, descricao, valor):
+        quantidade = str(quantidade).strip()
+        descricao = str(descricao).strip().upper()
+        valor = str(valor).strip()
+
+        if not quantidade:
+            messagebox.showwarning("Atenção", "Informe a quantidade.")
+            return
+
+        if not descricao:
+            messagebox.showwarning("Atenção", "Informe a descrição.")
+            return
+
+        if not valor:
+            messagebox.showwarning("Atenção", "Informe o valor.")
+            return
+
+        self.tree.insert("", "end", values=(quantidade, descricao, valor))
+        janela.destroy()
 
     def _em_desenvolvimento(self, nome_funcao):
         messagebox.showinfo(
