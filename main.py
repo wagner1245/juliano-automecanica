@@ -2791,7 +2791,7 @@ class ServicesFrame(tk.Frame):
         criar_botao(
             "🗑  Excluir",
             "#ef233c",
-            lambda: self._em_desenvolvimento("Excluir item"),
+            self.excluir_item_selecionado,
             12,
         ).pack(side="left", padx=(0, 14))
 
@@ -3306,6 +3306,28 @@ class ServicesFrame(tk.Frame):
         for indice, item in enumerate(self.tree.get_children()):
             tag = "linha_par_orcamento" if indice % 2 == 0 else "linha_impar_orcamento"
             self.tree.item(item, tags=(tag,))
+
+    def excluir_item_selecionado(self):
+        selecionado = self.tree.selection()
+
+        if not selecionado:
+            messagebox.showwarning("Atenção", "Selecione um item da tabela para excluir.")
+            return
+
+        confirmar = messagebox.askyesno(
+            "Confirmar exclusão",
+            "Deseja realmente excluir o item selecionado?"
+        )
+
+        if not confirmar:
+            return
+
+        for item in selecionado:
+            self.tree.delete(item)
+
+        self.atualizar_cores_tabela_orcamento()
+        self.atualizar_total_pecas()
+        self.atualizar_total_servicos()
 
     def adicionar_item_tabela(self, janela, quantidade, descricao, valor):
         quantidade = str(quantidade).strip()
