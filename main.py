@@ -14,6 +14,7 @@ import urllib.parse
 from datetime import datetime
 import os
 import tempfile
+import shutil
 
 from config import APP_TITLE, LOGO_PATH
 from database import db, init_db
@@ -2319,6 +2320,44 @@ class OrcamentoPreview(tk.Toplevel):
         lbl = tk.Label(self.area_interna, image=self.img_tk, bg="#cfd6df")
         lbl.pack(pady=20)
 
+    def salvar_imagem_na_pasta_orcamentos(self):
+        try:
+            if not os.path.exists(self.caminho_imagem):
+                messagebox.showerror("Erro", "Imagem do orçamento não encontrada.")
+                return None
+
+            pasta_base = os.path.dirname(os.path.abspath(__file__))
+            pasta_orcamentos = os.path.join(pasta_base, "Orçamentos")
+
+            if not os.path.exists(pasta_orcamentos):
+                os.makedirs(pasta_orcamentos)
+
+            nome_cliente_limpo = "".join(
+                ch for ch in str(self.nome_cliente or "CLIENTE").upper()
+                if ch.isalnum() or ch in (" ", "_", "-")
+            ).strip().replace(" ", "_")
+
+            veiculo_limpo = "".join(
+                ch for ch in str(self.veiculo or "VEICULO").upper()
+                if ch.isalnum() or ch in (" ", "_", "-")
+            ).strip().replace(" ", "_")
+
+            data_arquivo = datetime.now().strftime("%Y%m%d_%H%M%S")
+            nome_arquivo = f"ORCAMENTO_{nome_cliente_limpo}_{veiculo_limpo}_{data_arquivo}.jpg"
+
+            caminho_destino = os.path.join(pasta_orcamentos, nome_arquivo)
+            shutil.copy2(self.caminho_imagem, caminho_destino)
+
+            self.caminho_imagem = caminho_destino
+            return caminho_destino
+
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Não foi possível salvar o orçamento na pasta Orçamentos:\n{e}"
+            )
+            return None
+
     def enviar_para_cliente(self):
         telefone_cliente = self.telefone or ""
 
@@ -2338,6 +2377,11 @@ class OrcamentoPreview(tk.Toplevel):
             return
 
         telefone_envio = "55" + telefone_limpo
+
+        caminho_salvo = self.salvar_imagem_na_pasta_orcamentos()
+
+        if not caminho_salvo:
+            return
 
         mensagem = (
             f"Olá {self.nome_cliente}!\n\n"
@@ -3356,294 +3400,145 @@ class ServicesFrame(tk.Frame):
             messagebox.showwarning("Atenção", "Adicione pelo menos um item ao orçamento.")
             return
 
-        janela = tk.Toplevel(self)
-        janela.title("Pré-visualização do Orçamento")
-        janela.geometry("860x720")
-        janela.configure(bg="white")
-        janela.resizable(True, True)
-        janela.grab_set()
+        caminho_imagem = self.gerar_imagem_orcamento(nome_cliente, veiculo, itens)
 
-        topo = tk.Frame(janela, bg="#f5f6f8")
-        topo.pack(fill="x", padx=18, pady=(16, 8))
+        if not caminho_imagem:
+            return
 
-        tk.Label(
-            topo,
-            text="Pré-visualização do Orçamento",
-            bg="#f5f6f8",
-            fg="#1f2937",
-            font=("Segoe UI", 16, "bold"),
-        ).pack(anchor="w", pady=(0, 14))
+        telefone = ""
+        if hasattr(self, "telefone_orcamento_var"):
+            telefone = self.telefone_orcamento_var.get().strip()
 
-        botoes_topo = tk.Frame(topo, bg="#f5f6f8")
-        botoes_topo.pack(anchor="w")
-
-        tk.Button(
-            botoes_topo,
-            text="Enviar para Cliente",
-            bg="#16a34a",
-            fg="white",
-            activebackground="#15803d",
-            activeforeground="white",
-            bd=0,
-            padx=20,
-            pady=10,
-            font=("Segoe UI", 10, "bold"),
-            command=lambda: messagebox.showinfo("Enviar para Cliente", "Essa função será integrada depois."),
-        ).pack(side="left", padx=(0, 10))
-
-        tk.Button(
-            botoes_topo,
-            text="Imprimir",
-            bg="#2563eb",
-            fg="white",
-            activebackground="#1d4ed8",
-            activeforeground="white",
-            bd=0,
-            padx=22,
-            pady=10,
-            font=("Segoe UI", 10, "bold"),
-            command=lambda: messagebox.showinfo("Imprimir", "Essa função será integrada depois."),
-        ).pack(side="left", padx=(0, 10))
-
-        tk.Button(
-            botoes_topo,
-            text="Fechar",
-            bg="#dc2626",
-            fg="white",
-            activebackground="#b91c1c",
-            activeforeground="white",
-            bd=0,
-            padx=22,
-            pady=10,
-            font=("Segoe UI", 10, "bold"),
-            command=janela.destroy,
-        ).pack(side="left")
-
-        container_externo = tk.Frame(janela, bg="#cbd5e1")
-        container_externo.pack(fill="both", expand=True, padx=18, pady=(6, 18))
-
-        canvas = tk.Canvas(container_externo, bg="#cbd5e1", highlightthickness=0)
-        scrollbar = ttk.Scrollbar(container_externo, orient="vertical", command=canvas.yview)
-        canvas.configure(yscrollcommand=scrollbar.set)
-
-        scrollbar.pack(side="right", fill="y")
-        canvas.pack(side="left", fill="both", expand=True)
-
-        pagina = tk.Frame(canvas, bg="white", width=760)
-        canvas.create_window((0, 0), window=pagina, anchor="nw")
-
-        def atualizar_scroll(event=None):
-            canvas.configure(scrollregion=canvas.bbox("all"))
-
-        pagina.bind("<Configure>", atualizar_scroll)
-
-        conteudo = tk.Frame(pagina, bg="white")
-        conteudo.pack(fill="both", expand=True, padx=45, pady=35)
-
-        # =========================
-        # CABEÇALHO
-        # =========================
-        cabecalho = tk.Frame(conteudo, bg="white")
-        cabecalho.pack(fill="x")
-
-        try:
-            logo_path = LOGO_PATH
-            logo_img = Image.open(logo_path)
-            logo_img = logo_img.resize((110, 110))
-            janela.logo_orcamento_img = ImageTk.PhotoImage(logo_img)
-            tk.Label(cabecalho, image=janela.logo_orcamento_img, bg="white").pack(side="left", padx=(0, 25))
-        except Exception:
-            tk.Label(
-                cabecalho,
-                text="LOGO",
-                bg="white",
-                fg="#111827",
-                font=("Segoe UI", 14, "bold"),
-                width=10,
-                height=5,
-                relief="solid",
-                bd=1,
-            ).pack(side="left", padx=(0, 25))
-
-        titulo_box = tk.Frame(cabecalho, bg="white")
-        titulo_box.pack(side="left", anchor="center")
-
-        tk.Label(
-            titulo_box,
-            text="Juliano Automecânica",
-            bg="white",
-            fg="black",
-            font=("Segoe UI", 27),
-        ).pack(anchor="w")
-
-        tk.Label(
-            titulo_box,
-            text="ORÇAMENTO",
-            bg="white",
-            fg="black",
-            font=("Segoe UI", 19),
-        ).pack(anchor="w", pady=(8, 0))
-
-        tk.Frame(conteudo, bg="black", height=2).pack(fill="x", pady=(30, 25))
-
-        # =========================
-        # DADOS DO CLIENTE
-        # =========================
-        data_atual = datetime.now().strftime("%d/%m/%Y")
-
-        tk.Label(
-            conteudo,
-            text=f"Data: {data_atual}",
-            bg="white",
-            fg="black",
-            font=("Segoe UI", 13, "bold"),
-        ).pack(anchor="w", pady=(0, 16))
-
-        tk.Label(
-            conteudo,
-            text=f"Cliente: {nome_cliente}",
-            bg="white",
-            fg="black",
-            font=("Segoe UI", 13),
-        ).pack(anchor="w", pady=(0, 10))
-
-        tk.Label(
-            conteudo,
-            text=f"Veículo: {veiculo}",
-            bg="white",
-            fg="black",
-            font=("Segoe UI", 13),
-        ).pack(anchor="w", pady=(0, 24))
-
-        tk.Frame(conteudo, bg="black", height=2).pack(fill="x", pady=(0, 16))
-
-        # =========================
-        # TABELA
-        # =========================
-        header = tk.Frame(conteudo, bg="white")
-        header.pack(fill="x")
-
-        tk.Label(
-            header,
-            text="QUANTIDADE",
-            bg="white",
-            fg="black",
-            font=("Segoe UI", 13, "bold"),
-            anchor="w",
-            width=12,
-        ).pack(side="left")
-
-        tk.Label(
-            header,
-            text="DESCRIÇÃO",
-            bg="white",
-            fg="black",
-            font=("Segoe UI", 13, "bold"),
-            anchor="center",
-            width=42,
-        ).pack(side="left")
-
-        tk.Label(
-            header,
-            text="VALOR",
-            bg="white",
-            fg="black",
-            font=("Segoe UI", 13, "bold"),
-            anchor="center",
-            width=14,
-        ).pack(side="right")
-
-        tk.Frame(conteudo, bg="black", height=2).pack(fill="x", pady=(8, 12))
-
-        for quantidade, descricao, valor in itens:
-            linha = tk.Frame(conteudo, bg="white")
-            linha.pack(fill="x", pady=8)
-
-            tk.Label(
-                linha,
-                text=quantidade,
-                bg="white",
-                fg="black",
-                font=("Segoe UI", 13),
-                anchor="w",
-                width=12,
-            ).pack(side="left")
-
-            tk.Label(
-                linha,
-                text=descricao,
-                bg="white",
-                fg="black",
-                font=("Segoe UI", 13),
-                anchor="w",
-                width=42,
-            ).pack(side="left")
-
-            tk.Label(
-                linha,
-                text=f"R$ {valor}",
-                bg="white",
-                fg="black",
-                font=("Segoe UI", 13),
-                anchor="center",
-                width=14,
-            ).pack(side="right")
-
-        tk.Frame(conteudo, bg="black", height=2).pack(fill="x", pady=(22, 20))
-
-        # =========================
-        # TOTAIS
-        # =========================
-        mao_obra = "0"
+        mao_de_obra = "R$ 0,00"
         if hasattr(self, "mao_obra_var"):
-            mao_obra = self.mao_obra_var.get().strip() or "0"
+            mao_de_obra = self.mao_obra_var.get().strip() or "0,00"
+            if not mao_de_obra.startswith("R$"):
+                mao_de_obra = f"R$ {mao_de_obra}"
 
-        total_pecas = self.total_pecas_var.get().replace("R$", "").strip()
-        total_servicos = self.total_servicos_var.get().replace("R$", "").strip()
+        OrcamentoPreview(
+            self,
+            caminho_imagem,
+            nome_cliente=nome_cliente,
+            telefone=telefone,
+            veiculo=veiculo,
+            mao_de_obra=mao_de_obra,
+            total_pecas=self.total_pecas_var.get(),
+            total_servicos=self.total_servicos_var.get(),
+        )
 
-        tk.Label(
-            conteudo,
-            text=f"Mão de Obra: R$ {mao_obra}",
-            bg="white",
-            fg="black",
-            font=("Segoe UI", 13),
-        ).pack(anchor="w", pady=(0, 10))
+    def gerar_imagem_orcamento(self, nome_cliente, veiculo, itens):
+        try:
+            largura = 900
+            altura_linha = 38
 
-        tk.Label(
-            conteudo,
-            text=f"Total de Peças: R$ {total_pecas}",
-            bg="white",
-            fg="black",
-            font=("Segoe UI", 13),
-        ).pack(anchor="w", pady=(0, 10))
+            # altura maior para não cortar a parte inferior do orçamento
+            altura = 1200 + max(0, len(itens) - 4) * altura_linha
 
-        tk.Label(
-            conteudo,
-            text=f"Total de Serviços: R$ {total_servicos}",
-            bg="white",
-            fg="black",
-            font=("Segoe UI", 13, "bold"),
-        ).pack(anchor="w", pady=(0, 34))
+            img = Image.new("RGB", (largura, altura), "white")
+            draw = ImageDraw.Draw(img)
 
-        tk.Frame(conteudo, bg="black", height=2).pack(fill="x", pady=(0, 20))
+            def carregar_fonte(tamanho, negrito=False):
+                fontes = [
+                    "C:/Windows/Fonts/arialbd.ttf" if negrito else "C:/Windows/Fonts/arial.ttf",
+                    "C:/Windows/Fonts/segoeuib.ttf" if negrito else "C:/Windows/Fonts/segoeui.ttf",
+                ]
 
-        tk.Label(
-            conteudo,
-            text="Obrigado pela preferência!",
-            bg="white",
-            fg="black",
-            font=("Segoe UI", 11),
-        ).pack(anchor="w")
+                for fonte in fontes:
+                    try:
+                        return ImageFont.truetype(fonte, tamanho)
+                    except Exception:
+                        pass
 
-        # Centraliza a janela
-        janela.update_idletasks()
-        largura = janela.winfo_width()
-        altura = janela.winfo_height()
-        sw = janela.winfo_screenwidth()
-        sh = janela.winfo_screenheight()
-        x = (sw // 2) - (largura // 2)
-        y = (sh // 2) - (altura // 2)
-        janela.geometry(f"+{x}+{y}")
+                return ImageFont.load_default()
+
+            fonte_titulo = carregar_fonte(36)
+            fonte_subtitulo = carregar_fonte(26)
+            fonte_normal = carregar_fonte(20)
+            fonte_negrito = carregar_fonte(20, True)
+            fonte_menor = carregar_fonte(17)
+
+            preto = (0, 0, 0)
+
+            # LOGO
+            try:
+                logo = Image.open(LOGO_PATH).convert("RGBA")
+                logo = logo.resize((120, 120), Image.LANCZOS)
+                img.paste(logo, (80, 45), logo)
+            except Exception:
+                draw.rectangle((80, 45, 200, 165), outline=preto, width=2)
+                draw.text((113, 92), "LOGO", fill=preto, font=fonte_menor)
+
+            # Cabeçalho
+            draw.text((230, 65), "Juliano Automecânica", fill=preto, font=fonte_titulo)
+            draw.text((230, 115), "ORÇAMENTO", fill=preto, font=fonte_subtitulo)
+
+            y = 200
+            draw.line((70, y, largura - 70, y), fill=preto, width=2)
+
+            y += 35
+            data_atual = datetime.now().strftime("%d/%m/%Y")
+            draw.text((70, y), f"Data: {data_atual}", fill=preto, font=fonte_negrito)
+
+            y += 45
+            draw.text((70, y), f"Cliente: {nome_cliente}", fill=preto, font=fonte_normal)
+
+            y += 38
+            draw.text((70, y), f"Veículo: {veiculo}", fill=preto, font=fonte_normal)
+
+            y += 50
+            draw.line((70, y, largura - 70, y), fill=preto, width=2)
+
+            y += 28
+            draw.text((70, y), "QUANTIDADE", fill=preto, font=fonte_negrito)
+            draw.text((330, y), "DESCRIÇÃO", fill=preto, font=fonte_negrito)
+            draw.text((690, y), "VALOR", fill=preto, font=fonte_negrito)
+
+            y += 34
+            draw.line((70, y, largura - 70, y), fill=preto, width=2)
+
+            y += 26
+
+            for quantidade, descricao, valor in itens:
+                valor_limpo = str(valor).replace("R$", "").strip()
+                draw.text((90, y), str(quantidade), fill=preto, font=fonte_normal)
+                draw.text((330, y), str(descricao), fill=preto, font=fonte_normal)
+                draw.text((680, y), f"R$ {valor_limpo}", fill=preto, font=fonte_normal)
+                y += altura_linha
+
+            y += 10
+            draw.line((70, y, largura - 70, y), fill=preto, width=2)
+
+            y += 35
+            mao_obra = "0,00"
+            if hasattr(self, "mao_obra_var"):
+                mao_obra = self.mao_obra_var.get().strip() or "0,00"
+
+            total_pecas = self.total_pecas_var.get().replace("R$", "").strip()
+            total_servicos = self.total_servicos_var.get().replace("R$", "").strip()
+
+            draw.text((70, y), f"Mão de Obra: R$ {mao_obra}", fill=preto, font=fonte_normal)
+            y += 38
+            draw.text((70, y), f"Total de Peças: R$ {total_pecas}", fill=preto, font=fonte_normal)
+            y += 38
+            draw.text((70, y), f"Total de Serviços: R$ {total_servicos}", fill=preto, font=fonte_negrito)
+
+            y += 58
+            draw.line((70, y, largura - 70, y), fill=preto, width=2)
+
+            y += 35
+            draw.text((70, y), "Obrigado pela preferência!", fill=preto, font=fonte_menor)
+
+            pasta_temp = tempfile.gettempdir()
+            nome_arquivo = f"orcamento_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+            caminho = os.path.join(pasta_temp, nome_arquivo)
+
+            img.save(caminho, "JPEG", quality=95)
+            return caminho
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Não foi possível gerar a imagem do orçamento:\n{e}")
+            return None
+
 
     def adicionar_item_tabela(self, janela, quantidade, descricao, valor):
         quantidade = str(quantidade).strip()
