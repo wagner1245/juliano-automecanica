@@ -2747,6 +2747,10 @@ class ServicesFrame(tk.Frame):
         self.tree.configure(yscrollcommand=scrollbar.set)
 
         self.tree.pack(side="left", fill="both", expand=True)
+
+        # cores alternadas para deixar a tabela de orçamento mais bonita
+        self.tree.tag_configure("linha_par_orcamento", background="#f8fafc")
+        self.tree.tag_configure("linha_impar_orcamento", background="#eef2f7")
         scrollbar.pack(side="right", fill="y")
 
         # =========================
@@ -2929,6 +2933,7 @@ class ServicesFrame(tk.Frame):
 
         if hasattr(self, "total_servicos_var"):
             self.total_servicos_var.set("R$ 0,00")
+            self.atualizar_cores_tabela_orcamento()
 
     def validar_cliente_antes_adicionar(self):
         self.abrir_janela_adicionar_item()
@@ -3292,9 +3297,15 @@ class ServicesFrame(tk.Frame):
         valor_formatado = self._formatar_valor_item(valor)
 
         self.tree.item(item_id, values=(quantidade, descricao, valor_formatado))
+        self.atualizar_cores_tabela_orcamento()
         self.atualizar_total_pecas()
         self.atualizar_total_servicos()
         janela.destroy()
+
+    def atualizar_cores_tabela_orcamento(self):
+        for indice, item in enumerate(self.tree.get_children()):
+            tag = "linha_par_orcamento" if indice % 2 == 0 else "linha_impar_orcamento"
+            self.tree.item(item, tags=(tag,))
 
     def adicionar_item_tabela(self, janela, quantidade, descricao, valor):
         quantidade = str(quantidade).strip()
@@ -3324,6 +3335,7 @@ class ServicesFrame(tk.Frame):
             return
 
         self.tree.insert("", "end", values=(quantidade, descricao, valor_formatado))
+        self.atualizar_cores_tabela_orcamento()
         self.atualizar_total_pecas()
         self.atualizar_total_servicos()
 
