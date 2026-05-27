@@ -3078,6 +3078,33 @@ class ServicesFrame(tk.Frame):
         formatado = f"{numero:,.2f}"
         return formatado.replace(",", "X").replace(".", ",").replace("X", ".")
 
+    def _converter_valor_brasileiro_para_float(self, valor):
+        valor = str(valor or "").strip()
+        valor = valor.replace("R$", "").strip()
+
+        if not valor:
+            return 0.0
+
+        # Exemplo: 1.500,00 -> 1500.00
+        valor = valor.replace(".", "").replace(",", ".")
+
+        try:
+            return float(valor)
+        except ValueError:
+            return 0.0
+
+    def atualizar_total_pecas(self):
+        total = 0.0
+
+        for item in self.tree.get_children():
+            valores = self.tree.item(item, "values")
+
+            if len(valores) >= 3:
+                total += self._converter_valor_brasileiro_para_float(valores[2])
+
+        total_formatado = f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        self.total_pecas_var.set(total_formatado)
+
     def adicionar_item_tabela(self, janela, quantidade, descricao, valor):
         quantidade = str(quantidade).strip()
         descricao = str(descricao).strip().upper()
@@ -3106,6 +3133,7 @@ class ServicesFrame(tk.Frame):
             return
 
         self.tree.insert("", "end", values=(quantidade, descricao, valor_formatado))
+        self.atualizar_total_pecas()
         janela.destroy()
 
     def _em_desenvolvimento(self, nome_funcao):
