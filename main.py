@@ -2947,6 +2947,9 @@ class ServicesFrame(tk.Frame):
 
         descricao_var.trace_add("write", lambda *args: self._maiusculo_var(descricao_var))
 
+        validar_quantidade_cmd = janela.register(self._validar_quantidade_item)
+        validar_valor_cmd = janela.register(self._validar_valor_item)
+
         campos = [
             ("Quantidade:", quantidade_var),
             ("Descrição:", descricao_var),
@@ -2962,14 +2965,28 @@ class ServicesFrame(tk.Frame):
                 font=("Segoe UI", 10, "bold"),
             ).grid(row=i, column=0, sticky="w", pady=6)
 
-            tk.Entry(
-                frame,
-                textvariable=var,
-                width=34,
-                font=("Segoe UI", 10),
-                relief="solid",
-                bd=1,
-            ).grid(row=i, column=1, padx=(12, 0), pady=6, ipady=3)
+            entry_opcoes = {
+                "textvariable": var,
+                "width": 34,
+                "font": ("Segoe UI", 10),
+                "relief": "solid",
+                "bd": 1,
+            }
+
+            if label == "Quantidade:":
+                entry_opcoes["validate"] = "key"
+                entry_opcoes["validatecommand"] = (validar_quantidade_cmd, "%P")
+
+            if label == "Valor R$:":
+                entry_opcoes["validate"] = "key"
+                entry_opcoes["validatecommand"] = (validar_valor_cmd, "%P")
+
+            entrada = tk.Entry(frame, **entry_opcoes)
+            entrada.grid(row=i, column=1, padx=(12, 0), pady=6, ipady=3)
+
+            if label == "Valor R$:":
+                entrada.bind("<FocusOut>", lambda event: valor_var.set(self._formatar_valor_item(valor_var.get())))
+                entrada.bind("<Return>", lambda event: valor_var.set(self._formatar_valor_item(valor_var.get())))
 
         botoes = tk.Frame(frame, bg="#f5f6f8")
         botoes.grid(row=4, column=0, columnspan=2, pady=(16, 0))
@@ -3016,6 +3033,43 @@ class ServicesFrame(tk.Frame):
         y = (sh // 2) - (altura // 2)
         janela.geometry(f"+{x}+{y}")
 
+    def _validar_quantidade_item(self, novo_valor):
+        return novo_valor == "" or novo_valor.isdigit()
+
+    def _validar_valor_item(self, novo_valor):
+        if novo_valor == "":
+            return True
+
+        caracteres_validos = "0123456789,"
+        if any(ch not in caracteres_validos for ch in novo_valor):
+            return False
+
+        if novo_valor.count(",") > 1:
+            return False
+
+        if "," in novo_valor:
+            parte_decimal = novo_valor.split(",", 1)[1]
+            if len(parte_decimal) > 2:
+                return False
+
+        return True
+
+    def _formatar_valor_item(self, valor):
+        texto = str(valor).strip()
+
+        if not texto:
+            return ""
+
+        texto = texto.replace(".", "").replace(",", ".")
+
+        try:
+            numero = float(texto)
+        except ValueError:
+            return ""
+
+        formatado = f"{numero:,.2f}"
+        return formatado.replace(",", "X").replace(".", ",").replace("X", ".")
+
     def adicionar_item_tabela(self, janela, quantidade, descricao, valor):
         quantidade = str(quantidade).strip()
         descricao = str(descricao).strip().upper()
@@ -3023,6 +3077,10 @@ class ServicesFrame(tk.Frame):
 
         if not quantidade:
             messagebox.showwarning("Atenção", "Informe a quantidade.")
+            return
+
+        if not quantidade.isdigit():
+            messagebox.showwarning("Atenção", "A quantidade deve conter apenas números.")
             return
 
         if not descricao:
@@ -3033,7 +3091,13 @@ class ServicesFrame(tk.Frame):
             messagebox.showwarning("Atenção", "Informe o valor.")
             return
 
-        self.tree.insert("", "end", values=(quantidade, descricao, valor))
+        valor_formatado = self._formatar_valor_item(valor)
+
+        if not valor_formatado:
+            messagebox.showwarning("Atenção", "O valor deve conter apenas números.")
+            return
+
+        self.tree.insert("", "end", values=(quantidade, descricao, valor_formatado))
         janela.destroy()
 
     def _em_desenvolvimento(self, nome_funcao):
