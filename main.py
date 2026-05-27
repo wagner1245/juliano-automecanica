@@ -2912,6 +2912,24 @@ class ServicesFrame(tk.Frame):
         self.veiculo_orcamento_var.set("")
         self.cliente_vinculado_var.set("nenhum")
 
+        # limpa todos os itens do orçamento
+        for item in self.tree.get_children():
+            self.tree.delete(item)
+
+        # limpa campos do rodapé
+        if hasattr(self, "mao_obra_var"):
+            self.mao_obra_var.set("")
+
+        if hasattr(self, "search_var"):
+            self.search_var.set("")
+
+        # zera totais
+        if hasattr(self, "total_pecas_var"):
+            self.total_pecas_var.set("R$ 0,00")
+
+        if hasattr(self, "total_servicos_var"):
+            self.total_servicos_var.set("R$ 0,00")
+
     def validar_cliente_antes_adicionar(self):
         self.abrir_janela_adicionar_item()
 
