@@ -2512,6 +2512,7 @@ class ServicesFrame(tk.Frame):
         self.cliente_vinculado_var = tk.StringVar(value="nenhum")
         self.busca_placa_var = tk.StringVar()
         self.mao_obra_var = tk.StringVar()
+        self.mao_obra_var.trace_add("write", self.atualizar_total_servicos)
         self.total_pecas_var = tk.StringVar(value="R$ 0,00")
         self.total_servicos_var = tk.StringVar(value="R$ 0,00")
 
@@ -3093,6 +3094,19 @@ class ServicesFrame(tk.Frame):
         except ValueError:
             return 0.0
 
+    def atualizar_total_servicos(self, *args):
+        total_pecas = self._converter_valor_brasileiro_para_float(self.total_pecas_var.get())
+
+        valor_mao_obra = "0"
+        if hasattr(self, "mao_obra_var"):
+            valor_mao_obra = self.mao_obra_var.get()
+
+        mao_obra = self._converter_valor_brasileiro_para_float(valor_mao_obra)
+        total_servicos = total_pecas + mao_obra
+
+        total_formatado = f"R$ {total_servicos:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+        self.total_servicos_var.set(total_formatado)
+
     def atualizar_total_pecas(self):
         total = 0.0
 
@@ -3104,6 +3118,7 @@ class ServicesFrame(tk.Frame):
 
         total_formatado = f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         self.total_pecas_var.set(total_formatado)
+        self.atualizar_total_servicos()
 
     def adicionar_item_tabela(self, janela, quantidade, descricao, valor):
         quantidade = str(quantidade).strip()
