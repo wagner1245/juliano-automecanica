@@ -2780,7 +2780,7 @@ class ServicesFrame(tk.Frame):
         criar_botao(
             "✏  Editar",
             "#0b63ce",
-            lambda: self._em_desenvolvimento("Editar item"),
+            self.editar_item_selecionado,
             12,
         ).pack(side="left", padx=(0, 14))
 
@@ -3119,6 +3119,164 @@ class ServicesFrame(tk.Frame):
         total_formatado = f"R$ {total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
         self.total_pecas_var.set(total_formatado)
         self.atualizar_total_servicos()
+
+    def editar_item_selecionado(self):
+        selecionado = self.tree.selection()
+
+        if not selecionado:
+            messagebox.showwarning("Atenção", "Selecione um item da tabela para editar.")
+            return
+
+        item_id = selecionado[0]
+        valores = self.tree.item(item_id, "values")
+
+        if len(valores) < 3:
+            messagebox.showwarning("Atenção", "Item inválido para edição.")
+            return
+
+        janela = tk.Toplevel(self)
+        janela.title("Editar Item")
+        janela.geometry("420x260")
+        janela.resizable(False, False)
+        janela.configure(bg="#f5f6f8")
+        janela.grab_set()
+
+        quantidade_var = tk.StringVar(value=str(valores[0]))
+        descricao_var = tk.StringVar(value=str(valores[1]))
+        valor_var = tk.StringVar(value=str(valores[2]))
+
+        validar_quantidade_cmd = (janela.register(self._validar_quantidade_item), "%P")
+        validar_valor_cmd = (janela.register(self._validar_valor_item), "%P")
+
+        frame = tk.Frame(janela, bg="#f5f6f8", padx=24, pady=22)
+        frame.pack(fill="both", expand=True)
+
+        tk.Label(
+            frame,
+            text="Editar item do orçamento",
+            bg="#f5f6f8",
+            fg="#0b63ce",
+            font=("Segoe UI", 13, "bold"),
+        ).grid(row=0, column=0, columnspan=2, pady=(0, 18))
+
+        campos = [
+            ("Quantidade:", quantidade_var),
+            ("Descrição:", descricao_var),
+            ("Valor R$:", valor_var),
+        ]
+
+        quantidade_entry = None
+
+        for i, (label, var) in enumerate(campos, start=1):
+            tk.Label(
+                frame,
+                text=label,
+                bg="#f5f6f8",
+                fg="#111827",
+                font=("Segoe UI", 10, "bold"),
+            ).grid(row=i, column=0, sticky="w", pady=6)
+
+            opcoes = {
+                "textvariable": var,
+                "width": 30,
+                "font": ("Segoe UI", 10),
+                "relief": "solid",
+                "bd": 1,
+            }
+
+            if label == "Quantidade:":
+                opcoes["validate"] = "key"
+                opcoes["validatecommand"] = validar_quantidade_cmd
+
+            if label == "Valor R$:":
+                opcoes["validate"] = "key"
+                opcoes["validatecommand"] = validar_valor_cmd
+
+            entrada = tk.Entry(frame, **opcoes)
+            entrada.grid(row=i, column=1, padx=(12, 0), pady=6, ipady=3)
+
+            if label == "Quantidade:":
+                quantidade_entry = entrada
+
+            if label == "Descrição:":
+                var.trace_add("write", lambda *args, v=var: self._maiusculo_var(v))
+
+            if label == "Valor R$:":
+                entrada.bind("<FocusOut>", lambda event: valor_var.set(self._formatar_valor_item(valor_var.get())))
+                entrada.bind("<Return>", lambda event: valor_var.set(self._formatar_valor_item(valor_var.get())))
+
+        botoes = tk.Frame(frame, bg="#f5f6f8")
+        botoes.grid(row=4, column=0, columnspan=2, pady=(20, 0))
+
+        tk.Button(
+            botoes,
+            text="Salvar",
+            bg="#08803a",
+            fg="white",
+            activebackground="#06632d",
+            activeforeground="white",
+            bd=0,
+            padx=22,
+            pady=7,
+            font=("Segoe UI", 10, "bold"),
+            command=lambda: self.salvar_edicao_item(
+                janela,
+                item_id,
+                quantidade_var.get(),
+                descricao_var.get(),
+                valor_var.get()
+            ),
+        ).pack(side="left", padx=8)
+
+        tk.Button(
+            botoes,
+            text="Cancelar",
+            bg="#6b7280",
+            fg="white",
+            activebackground="#4b5563",
+            activeforeground="white",
+            bd=0,
+            padx=22,
+            pady=7,
+            font=("Segoe UI", 10, "bold"),
+            command=janela.destroy,
+        ).pack(side="left", padx=8)
+
+        janela.update_idletasks()
+        largura = janela.winfo_width()
+        altura = janela.winfo_height()
+        sw = janela.winfo_screenwidth()
+        sh = janela.winfo_screenheight()
+        x = (sw // 2) - (largura // 2)
+        y = (sh // 2) - (altura // 2)
+        janela.geometry(f"+{x}+{y}")
+
+        if quantidade_entry:
+            janela.after(150, lambda: (quantidade_entry.focus_force(), quantidade_entry.select_range(0, tk.END)))
+
+    def salvar_edicao_item(self, janela, item_id, quantidade, descricao, valor):
+        quantidade = str(quantidade or "").strip()
+        descricao = str(descricao or "").strip().upper()
+        valor = str(valor or "").strip()
+
+        if not quantidade:
+            messagebox.showwarning("Atenção", "Informe a quantidade.")
+            return
+
+        if not descricao:
+            messagebox.showwarning("Atenção", "Informe a descrição.")
+            return
+
+        if not valor:
+            messagebox.showwarning("Atenção", "Informe o valor.")
+            return
+
+        valor_formatado = self._formatar_valor_item(valor)
+
+        self.tree.item(item_id, values=(quantidade, descricao, valor_formatado))
+        self.atualizar_total_pecas()
+        self.atualizar_total_servicos()
+        janela.destroy()
 
     def adicionar_item_tabela(self, janela, quantidade, descricao, valor):
         quantidade = str(quantidade).strip()
