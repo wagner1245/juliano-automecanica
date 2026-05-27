@@ -3325,7 +3325,20 @@ class ServicesFrame(tk.Frame):
 
         self.tree.insert("", "end", values=(quantidade, descricao, valor_formatado))
         self.atualizar_total_pecas()
-        janela.destroy()
+        self.atualizar_total_servicos()
+
+        # limpa os campos para permitir adicionar outro item sem fechar a janela
+        for widget in janela.winfo_children():
+            for child in widget.winfo_children():
+                if isinstance(child, tk.Entry):
+                    child.delete(0, tk.END)
+
+        # volta o foco para o primeiro campo da janela
+        for widget in janela.winfo_children():
+            for child in widget.winfo_children():
+                if isinstance(child, tk.Entry):
+                    janela.after(100, lambda campo=child: (campo.focus_force(), campo.icursor(tk.END)))
+                    return
 
     def _em_desenvolvimento(self, nome_funcao):
         messagebox.showinfo(
