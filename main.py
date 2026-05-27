@@ -2956,6 +2956,8 @@ class ServicesFrame(tk.Frame):
             ("Valor R$:", valor_var),
         ]
 
+        quantidade_entry = None
+
         for i, (label, var) in enumerate(campos, start=1):
             tk.Label(
                 frame,
@@ -2983,6 +2985,9 @@ class ServicesFrame(tk.Frame):
 
             entrada = tk.Entry(frame, **entry_opcoes)
             entrada.grid(row=i, column=1, padx=(12, 0), pady=6, ipady=3)
+
+            if label == "Quantidade:":
+                quantidade_entry = entrada
 
             if label == "Valor R$:":
                 entrada.bind("<FocusOut>", lambda event: valor_var.set(self._formatar_valor_item(valor_var.get())))
@@ -3032,6 +3037,9 @@ class ServicesFrame(tk.Frame):
         x = (sw // 2) - (largura // 2)
         y = (sh // 2) - (altura // 2)
         janela.geometry(f"+{x}+{y}")
+
+        if quantidade_entry:
+            janela.after(150, lambda: (quantidade_entry.focus_force(), quantidade_entry.icursor(tk.END)))
 
     def _validar_quantidade_item(self, novo_valor):
         return novo_valor == "" or novo_valor.isdigit()
