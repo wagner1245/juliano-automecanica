@@ -2461,7 +2461,7 @@ class OrcamentoPreview(tk.Toplevel):
             text="Digite o telefone com WhatsApp (com DDD):",
             bg="#f5f6f8",
             fg="#111827",
-            font=("Segoe UI", 9),
+            font=("Segoe UI", 8),
         ).pack(anchor="w", pady=(0, 6))
 
         entrada = tk.Entry(
@@ -2611,6 +2611,8 @@ class ServicesFrame(tk.Frame):
         self.veiculo_orcamento_var = tk.StringVar()
         self.cliente_vinculado_var = tk.StringVar(value="nenhum")
         self.busca_placa_var = tk.StringVar()
+        self.cliente_orcamento_id = None
+        self.sugestoes_placa_clientes = []
         self.mao_obra_var = tk.StringVar()
         self.mao_obra_var.trace_add("write", self.atualizar_total_servicos)
         self.total_pecas_var = tk.StringVar(value="R$ 0,00")
@@ -2621,6 +2623,9 @@ class ServicesFrame(tk.Frame):
         )
         self.veiculo_orcamento_var.trace_add(
             "write", lambda *args: self._maiusculo_var(self.veiculo_orcamento_var)
+        )
+        self.busca_placa_var.trace_add(
+            "write", lambda *args: self._maiusculo_var(self.busca_placa_var)
         )
 
         # =========================
@@ -2925,14 +2930,22 @@ class ServicesFrame(tk.Frame):
             font=("Segoe UI", 10, "bold"),
         ).grid(row=0, column=0, sticky="w", pady=(0, 7))
 
-        tk.Entry(
+        self.busca_placa_entry = tk.Entry(
             busca_box,
             textvariable=self.busca_placa_var,
             font=("Segoe UI", 10),
             width=16,
             relief="solid",
             bd=1,
-        ).grid(row=0, column=1, padx=(10, 0), pady=(0, 7), ipady=2)
+        )
+        self.busca_placa_entry.grid(row=0, column=1, padx=(10, 0), pady=(0, 7), ipady=2)
+        self.busca_placa_entry.bind("<KeyRelease>", self.atualizar_sugestoes_placa)
+        self.busca_placa_entry.bind("<Return>", self.selecionar_primeira_sugestao_placa)
+        
+        self.popup_sugestoes_placa = None
+        self.sugestoes_placa = None
+
+        self.winfo_toplevel().bind("<Unmap>", self._ao_minimizar_janela, add="+")
 
         tk.Label(
             busca_box,
@@ -2991,6 +3004,189 @@ class ServicesFrame(tk.Frame):
             font=("Segoe UI", 12, "bold"),
         ).grid(row=1, column=2)
 
+    def _normalizar_placa_busca(self, valor):
+        return "".join(ch for ch in str(valor or "").upper() if ch.isalnum())
+
+    def _ao_minimizar_janela(self, event=None):
+        try:
+            if self.winfo_toplevel().state() == "iconic":
+                self.esconder_sugestoes_placa()
+        except Exception:
+            pass
+
+    def esconder_sugestoes_placa(self):
+        if hasattr(self, "popup_sugestoes_placa") and self.popup_sugestoes_placa:
+            try:
+                self.popup_sugestoes_placa.destroy()
+            except Exception:
+                pass
+
+        self.popup_sugestoes_placa = None
+        self.sugestoes_placa = None
+        self.sugestoes_placa_clientes = []
+
+    def mostrar_popup_sugestoes_placa(self):
+        self.esconder_sugestoes_placa()
+
+        self.popup_sugestoes_placa = tk.Toplevel(self)
+        self.popup_sugestoes_placa.overrideredirect(True)
+        self.popup_sugestoes_placa.configure(bg="white")
+        self.popup_sugestoes_placa.transient(self.winfo_toplevel())
+        self.popup_sugestoes_placa.attributes("-topmost", True)
+        self.popup_sugestoes_placa.lift(self.winfo_toplevel())
+
+        self.sugestoes_placa = tk.Listbox(
+            self.popup_sugestoes_placa,
+            width=46,
+            height=4,
+            font=("Segoe UI", 9),
+            relief="solid",
+            bd=1,
+            activestyle="none",
+        )
+        self.sugestoes_placa.pack(fill="both", expand=True)
+
+        self.sugestoes_placa.bind("<<ListboxSelect>>", self.selecionar_sugestao_placa)
+        self.sugestoes_placa.bind("<Return>", self.selecionar_sugestao_placa)
+        self.sugestoes_placa.bind("<Escape>", lambda event: self.esconder_sugestoes_placa())
+
+        self.busca_placa_entry.update_idletasks()
+        x = self.busca_placa_entry.winfo_rootx()
+        y = self.busca_placa_entry.winfo_rooty() + self.busca_placa_entry.winfo_height()
+
+        largura = 430
+        altura = 82
+        self.popup_sugestoes_placa.geometry(f"{largura}x{altura}+{x}+{y}")
+
+    def atualizar_sugestoes_placa(self, event=None):
+        placa_digitada = self._normalizar_placa_busca(self.busca_placa_var.get())
+
+        teclas_ignorar = {"Up", "Down", "Left", "Right", "Return", "Escape", "Tab"}
+        if event is not None and getattr(event, "keysym", "") in teclas_ignorar:
+            if event.keysym == "Escape":
+                self.esconder_sugestoes_placa()
+            return
+
+        if not placa_digitada:
+            self.esconder_sugestoes_placa()
+            return
+
+        try:
+            con = db()
+            cur = con.cursor()
+
+            cur.execute(
+                """
+                SELECT c.id, c.name, v.vehicle, v.plate
+                FROM vehicles v
+                INNER JOIN clients c ON c.id = v.client_id
+                WHERE UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) LIKE ?
+                ORDER BY c.name
+                LIMIT 5
+                """,
+                (placa_digitada + "%",),
+            )
+
+            resultados = cur.fetchall()
+            con.close()
+
+            if not resultados:
+                self.esconder_sugestoes_placa()
+                return
+
+            self.mostrar_popup_sugestoes_placa()
+
+            for cliente_id, nome, veiculo, placa in resultados:
+                texto_sugestao = f"{placa or placa_digitada} - {nome or ''} - {veiculo or ''}".strip().upper()
+                self.sugestoes_placa.insert(tk.END, texto_sugestao)
+                self.sugestoes_placa_clientes.append((cliente_id, nome, veiculo, placa))
+
+        except Exception as e:
+            self.esconder_sugestoes_placa()
+            messagebox.showerror("Erro", f"Não foi possível buscar sugestões de placa:\n{e}")
+
+    def selecionar_primeira_sugestao_placa(self, event=None):
+        if hasattr(self, "sugestoes_placa") and self.sugestoes_placa and self.sugestoes_placa.size() > 0:
+            self.sugestoes_placa.selection_clear(0, tk.END)
+            self.sugestoes_placa.selection_set(0)
+            self.sugestoes_placa.activate(0)
+            self.selecionar_sugestao_placa()
+            return "break"
+
+        self.buscar_cliente_por_placa()
+        return "break"
+
+    def selecionar_sugestao_placa(self, event=None):
+        if not hasattr(self, "sugestoes_placa_clientes"):
+            return
+
+        if not self.sugestoes_placa:
+            return
+
+        selecao = self.sugestoes_placa.curselection()
+        if not selecao:
+            return
+
+        indice = selecao[0]
+
+        if indice < 0 or indice >= len(self.sugestoes_placa_clientes):
+            return
+
+        cliente_id, nome, veiculo, placa = self.sugestoes_placa_clientes[indice]
+
+        self.cliente_orcamento_id = cliente_id
+        self.nome_orcamento_var.set(str(nome or "").strip().upper())
+        self.veiculo_orcamento_var.set(str(veiculo or "").strip().upper())
+        self.busca_placa_var.set(str(placa or "").strip().upper())
+        self.cliente_vinculado_var.set(f"{nome or ''} - {veiculo or ''}".strip().upper())
+
+        self.esconder_sugestoes_placa()
+        return "break"
+
+    def buscar_cliente_por_placa(self, event=None):
+        placa_digitada = self._normalizar_placa_busca(self.busca_placa_var.get())
+
+        if not placa_digitada:
+            return
+
+        try:
+            con = db()
+            cur = con.cursor()
+
+            cur.execute(
+                """
+                SELECT c.id, c.name, v.vehicle, v.plate
+                FROM vehicles v
+                INNER JOIN clients c ON c.id = v.client_id
+                WHERE UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) LIKE ?
+                ORDER BY c.name
+                LIMIT 1
+                """,
+                (placa_digitada + "%",),
+            )
+
+            cliente = cur.fetchone()
+            con.close()
+
+            if not cliente:
+                self.cliente_orcamento_id = None
+                self.nome_orcamento_var.set("")
+                self.veiculo_orcamento_var.set("")
+                self.cliente_vinculado_var.set("nenhum")
+                messagebox.showwarning("Atenção", "Cliente não encontrado para esta placa.")
+                return
+
+            cliente_id, nome, veiculo, placa_banco = cliente
+
+            self.cliente_orcamento_id = cliente_id
+            self.nome_orcamento_var.set(str(nome or "").strip().upper())
+            self.veiculo_orcamento_var.set(str(veiculo or "").strip().upper())
+            self.busca_placa_var.set(str(placa_banco or placa_digitada).strip().upper())
+            self.cliente_vinculado_var.set(f"{nome or ''} - {veiculo or ''}".strip().upper())
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Não foi possível buscar o cliente pela placa:\n{e}")
+
     def _maiusculo_var(self, var):
         texto = var.get()
         texto_maiusculo = texto.upper()
@@ -3009,12 +3205,16 @@ class ServicesFrame(tk.Frame):
             messagebox.showwarning("Atenção", "Informe o veículo do cliente.")
             return
 
+        self.cliente_orcamento_id = None
         self.cliente_vinculado_var.set(f"{nome} - {veiculo}")
 
     def limpar_cliente(self):
         self.nome_orcamento_var.set("")
         self.veiculo_orcamento_var.set("")
         self.cliente_vinculado_var.set("nenhum")
+        self.cliente_orcamento_id = None
+        self.busca_placa_var.set("")
+        self.esconder_sugestoes_placa()
 
         # limpa todos os itens do orçamento
         for item in self.tree.get_children():
@@ -3024,8 +3224,8 @@ class ServicesFrame(tk.Frame):
         if hasattr(self, "mao_obra_var"):
             self.mao_obra_var.set("")
 
-        if hasattr(self, "search_var"):
-            self.search_var.set("")
+        if hasattr(self, "busca_placa_var"):
+            self.busca_placa_var.set("")
 
         # zera totais
         if hasattr(self, "total_pecas_var"):
