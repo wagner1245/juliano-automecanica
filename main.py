@@ -3491,7 +3491,7 @@ class ServicesFrame(tk.Frame):
 
             y += 36
             draw.text((60, y), "QUANTIDADE", fill=preto, font=fonte_negrito)
-            draw.text((430, y), "DESCRIÇÃO", fill=preto, font=fonte_negrito, anchor="mm")
+            draw.text((430, y + 15), "DESCRIÇÃO", fill=preto, font=fonte_negrito, anchor="mm")
             draw.text((800, y), "VALOR", fill=preto, font=fonte_negrito, anchor="ra")
 
             y += 40
