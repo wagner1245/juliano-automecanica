@@ -3428,10 +3428,10 @@ class ServicesFrame(tk.Frame):
 
     def gerar_imagem_orcamento(self, nome_cliente, veiculo, itens):
         try:
+            # Mantém a folha no mesmo tamanho para a pré-visualização não reduzir automaticamente.
+            # O conteúdo interno foi aumentado.
             largura = 900
-            altura_linha = 38
-
-            # altura maior para não cortar a parte inferior do orçamento
+            altura_linha = 48
             altura = 1200 + max(0, len(itens) - 4) * altura_linha
 
             img = Image.new("RGB", (largura, altura), "white")
@@ -3451,64 +3451,65 @@ class ServicesFrame(tk.Frame):
 
                 return ImageFont.load_default()
 
-            fonte_titulo = carregar_fonte(36)
-            fonte_subtitulo = carregar_fonte(26)
-            fonte_normal = carregar_fonte(20)
-            fonte_negrito = carregar_fonte(20, True)
-            fonte_menor = carregar_fonte(17)
+            # Fontes maiores dentro do mesmo JPG
+            fonte_titulo = carregar_fonte(43)
+            fonte_subtitulo = carregar_fonte(31)
+            fonte_normal = carregar_fonte(25)
+            fonte_negrito = carregar_fonte(25, True)
+            fonte_menor = carregar_fonte(21)
 
             preto = (0, 0, 0)
 
-            # LOGO
+            # LOGO maior dentro do mesmo JPG
             try:
                 logo = Image.open(LOGO_PATH).convert("RGBA")
-                logo = logo.resize((120, 120), Image.LANCZOS)
-                img.paste(logo, (80, 45), logo)
+                logo = logo.resize((155, 155), Image.LANCZOS)
+                img.paste(logo, (60, 35), logo)
             except Exception:
-                draw.rectangle((80, 45, 200, 165), outline=preto, width=2)
-                draw.text((113, 92), "LOGO", fill=preto, font=fonte_menor)
+                draw.rectangle((60, 35, 215, 190), outline=preto, width=3)
+                draw.text((105, 95), "LOGO", fill=preto, font=fonte_menor)
 
-            # Cabeçalho
-            draw.text((230, 65), "Juliano Automecânica", fill=preto, font=fonte_titulo)
-            draw.text((230, 115), "ORÇAMENTO", fill=preto, font=fonte_subtitulo)
+            # Cabeçalho ajustado
+            draw.text((245, 58), "Juliano Automecânica", fill=preto, font=fonte_titulo)
+            draw.text((245, 122), "ORÇAMENTO", fill=preto, font=fonte_subtitulo)
 
-            y = 200
-            draw.line((70, y, largura - 70, y), fill=preto, width=2)
-
-            y += 35
-            data_atual = datetime.now().strftime("%d/%m/%Y")
-            draw.text((70, y), f"Data: {data_atual}", fill=preto, font=fonte_negrito)
+            y = 230
+            draw.line((60, y, largura - 60, y), fill=preto, width=3)
 
             y += 45
-            draw.text((70, y), f"Cliente: {nome_cliente}", fill=preto, font=fonte_normal)
+            data_atual = datetime.now().strftime("%d/%m/%Y")
+            draw.text((60, y), f"Data: {data_atual}", fill=preto, font=fonte_negrito)
 
-            y += 38
-            draw.text((70, y), f"Veículo: {veiculo}", fill=preto, font=fonte_normal)
+            y += 55
+            draw.text((60, y), f"Cliente: {nome_cliente}", fill=preto, font=fonte_normal)
 
-            y += 50
-            draw.line((70, y, largura - 70, y), fill=preto, width=2)
+            y += 48
+            draw.text((60, y), f"Veículo: {veiculo}", fill=preto, font=fonte_normal)
 
-            y += 28
-            draw.text((70, y), "QUANTIDADE", fill=preto, font=fonte_negrito)
-            draw.text((330, y), "DESCRIÇÃO", fill=preto, font=fonte_negrito)
-            draw.text((690, y), "VALOR", fill=preto, font=fonte_negrito)
+            y += 62
+            draw.line((60, y, largura - 60, y), fill=preto, width=3)
+
+            y += 36
+            draw.text((60, y), "QUANTIDADE", fill=preto, font=fonte_negrito)
+            draw.text((430, y), "DESCRIÇÃO", fill=preto, font=fonte_negrito, anchor="mm")
+            draw.text((800, y), "VALOR", fill=preto, font=fonte_negrito, anchor="ra")
+
+            y += 40
+            draw.line((60, y, largura - 60, y), fill=preto, width=3)
 
             y += 34
-            draw.line((70, y, largura - 70, y), fill=preto, width=2)
-
-            y += 26
 
             for quantidade, descricao, valor in itens:
                 valor_limpo = str(valor).replace("R$", "").strip()
-                draw.text((90, y), str(quantidade), fill=preto, font=fonte_normal)
-                draw.text((330, y), str(descricao), fill=preto, font=fonte_normal)
-                draw.text((680, y), f"R$ {valor_limpo}", fill=preto, font=fonte_normal)
+                draw.text((85, y), str(quantidade), fill=preto, font=fonte_normal)
+                draw.text((430, y), str(descricao), fill=preto, font=fonte_normal, anchor="ma")
+                draw.text((800, y), f"R$ {valor_limpo}", fill=preto, font=fonte_normal, anchor="ra")
                 y += altura_linha
 
-            y += 10
-            draw.line((70, y, largura - 70, y), fill=preto, width=2)
+            y += 16
+            draw.line((60, y, largura - 60, y), fill=preto, width=3)
 
-            y += 35
+            y += 45
             mao_obra = "0,00"
             if hasattr(self, "mao_obra_var"):
                 mao_obra = self.mao_obra_var.get().strip() or "0,00"
@@ -3516,17 +3517,17 @@ class ServicesFrame(tk.Frame):
             total_pecas = self.total_pecas_var.get().replace("R$", "").strip()
             total_servicos = self.total_servicos_var.get().replace("R$", "").strip()
 
-            draw.text((70, y), f"Mão de Obra: R$ {mao_obra}", fill=preto, font=fonte_normal)
-            y += 38
-            draw.text((70, y), f"Total de Peças: R$ {total_pecas}", fill=preto, font=fonte_normal)
-            y += 38
-            draw.text((70, y), f"Total de Serviços: R$ {total_servicos}", fill=preto, font=fonte_negrito)
+            draw.text((60, y), f"Mão de Obra: R$ {mao_obra}", fill=preto, font=fonte_normal)
+            y += 48
+            draw.text((60, y), f"Total de Peças: R$ {total_pecas}", fill=preto, font=fonte_normal)
+            y += 52
+            draw.text((60, y), f"Total de Serviços: R$ {total_servicos}", fill=preto, font=fonte_negrito)
 
-            y += 58
-            draw.line((70, y, largura - 70, y), fill=preto, width=2)
+            y += 78
+            draw.line((60, y, largura - 60, y), fill=preto, width=3)
 
-            y += 35
-            draw.text((70, y), "Obrigado pela preferência!", fill=preto, font=fonte_menor)
+            y += 45
+            draw.text((60, y), "Obrigado pela preferência!", fill=preto, font=fonte_menor)
 
             pasta_temp = tempfile.gettempdir()
             nome_arquivo = f"orcamento_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
