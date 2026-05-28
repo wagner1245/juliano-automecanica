@@ -3947,7 +3947,7 @@ class OrdemServicoFrame(tk.Frame):
 
         tk.Label(
             esquerda,
-            text="Informe CPF, Placa ou Nome",
+            text="Informe a placa do veículo",
             bg="white",
             fg="#111827",
             font=("Segoe UI", 8),
@@ -3974,14 +3974,6 @@ class OrdemServicoFrame(tk.Frame):
             padx=10,
             pady=6,
         ).pack(side="left", padx=(8, 0))
-
-        tk.Label(
-            topo,
-            text="➡",
-            bg="white",
-            fg="#2563eb",
-            font=("Segoe UI", 24, "bold"),
-        ).place(relx=0.50, rely=0.62, anchor="center")
 
         tk.Label(
             direita,
@@ -4113,13 +4105,11 @@ class OrdemServicoFrame(tk.Frame):
         return "".join(ch for ch in str(valor or "").upper() if ch.isalnum())
 
     def buscar_cliente_os(self):
-        termo = self.busca_cliente_os_var.get().strip()
-        termo_numero = "".join(ch for ch in termo if ch.isdigit())
-        termo_placa = self._normalizar_busca_os(termo)
-        termo_nome = termo.upper()
+        placa_digitada = self.busca_cliente_os_var.get().strip()
+        placa_normalizada = self._normalizar_busca_os(placa_digitada)
 
-        if not termo:
-            messagebox.showwarning("Atenção", "Digite CPF, placa ou nome do cliente.")
+        if not placa_normalizada:
+            messagebox.showwarning("Atenção", "Digite a placa do veículo.")
             return
 
         try:
@@ -4128,36 +4118,44 @@ class OrdemServicoFrame(tk.Frame):
 
             cur.execute(
                 """
-                SELECT c.id, c.cpf, c.name, c.phone, c.city,
-                       v.plate, v.vehicle
-                FROM clients c
-                LEFT JOIN vehicles v ON v.client_id = c.id
-                WHERE c.cpf = ?
-                   OR c.phone = ?
-                   OR UPPER(c.name) LIKE ?
-                   OR UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) LIKE ?
+                SELECT
+                    c.id,
+                    c.cpf,
+                    c.name,
+                    c.phone,
+                    c.city,
+                    v.plate,
+                    v.vehicle
+                FROM vehicles v
+                INNER JOIN clients c ON c.id = v.client_id
+                WHERE UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) LIKE ?
                 ORDER BY c.name
                 LIMIT 1
                 """,
-                (termo_numero, termo_numero, f"%{termo_nome}%", f"{termo_placa}%"),
+                (f"{placa_normalizada}%",),
             )
 
             cliente = cur.fetchone()
             con.close()
 
             if not cliente:
-                messagebox.showwarning("Atenção", "Cliente não encontrado.")
+                messagebox.showwarning(
+                    "Placa não encontrada",
+                    "Nenhum cliente cadastrado foi encontrado com essa placa."
+                )
                 return
 
             self.carregar_cliente_na_os(cliente)
 
         except Exception as e:
-            messagebox.showerror("Erro", f"Não foi possível buscar o cliente:\n{e}")
+            messagebox.showerror("Erro", f"Não foi possível buscar a placa:\n{e}")
 
     def carregar_cliente_na_os(self, cliente):
         cliente_id, cpf, nome, telefone, cidade, placa, veiculo = cliente
 
         self.cliente_os_id = cliente_id
+
+        # Mantém os dados salvos internamente para usar depois ao salvar/imprimir a OS.
         self.os_nome_var.set(str(nome or "-").strip().upper())
         self.os_cpf_var.set(str(cpf or "-").strip())
         self.os_telefone_var.set(str(telefone or "-").strip())
@@ -4165,14 +4163,124 @@ class OrdemServicoFrame(tk.Frame):
         self.os_placa_var.set(str(placa or "-").strip().upper())
         self.os_veiculo_var.set(str(veiculo or "-").strip().upper())
 
-        nome_txt = self.os_nome_var.get()
-        placa_txt = self.os_placa_var.get()
+        nome_txt = str(nome or "").strip().upper()
+        placa_txt = str(placa or "").strip().upper()
+        veiculo_txt = str(veiculo or "").strip().upper()
+
+        if placa_txt:
+            self.busca_cliente_os_var.set(f"{nome_txt} - {placa_txt}")
+        else:
+            self.busca_cliente_os_var.set(nome_txt)
+
         self.combo_orcamentos_os.configure(
-            values=["Selecione um orçamento...", f"Último orçamento - {nome_txt} - {placa_txt}"]
+            values=[
+                "Selecione um orçamento...",
+                f"Cliente selecionado: {nome_txt} - {veiculo_txt} - {placa_txt}",
+            ]
         )
         self.orcamento_os_var.set("Selecione um orçamento...")
 
-        messagebox.showinfo("Sucesso", "Cliente localizado e vinculado à ordem de serviço.")
+        self.mostrar_cliente_localizado_os(nome_txt, veiculo_txt, placa_txt)
+
+    def mostrar_cliente_localizado_os(self, nome, veiculo, placa):
+        janela = tk.Toplevel(self)
+        janela.title("Cliente localizado")
+        janela.configure(bg="#f5f6f8")
+        janela.resizable(False, False)
+        janela.grab_set()
+
+        largura = 480
+        altura = 260
+
+        janela.update_idletasks()
+        sw = janela.winfo_screenwidth()
+        sh = janela.winfo_screenheight()
+        x = (sw // 2) - (largura // 2)
+        y = (sh // 2) - (altura // 2)
+        janela.geometry(f"{largura}x{altura}+{x}+{y}")
+
+        card = tk.Frame(
+            janela,
+            bg="white",
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+        )
+        card.pack(fill="both", expand=True, padx=18, pady=18)
+
+        topo = tk.Frame(card, bg="white")
+        topo.pack(fill="x", padx=18, pady=(18, 12))
+
+        tk.Label(
+            topo,
+            text="ℹ",
+            bg="#0b63ce",
+            fg="white",
+            font=("Segoe UI", 22, "bold"),
+            width=2,
+        ).pack(side="left", padx=(0, 14))
+
+        tk.Label(
+            topo,
+            text="Cliente vinculado à Ordem de Serviço",
+            bg="white",
+            fg="#111827",
+            font=("Segoe UI", 13, "bold"),
+        ).pack(side="left", anchor="center")
+
+        info = tk.Frame(card, bg="white")
+        info.pack(fill="x", padx=32, pady=(4, 12))
+
+        dados = [
+            ("Nome:", nome or "-"),
+            ("Veículo:", veiculo or "-"),
+            ("Placa:", placa or "-"),
+        ]
+
+        for titulo, valor in dados:
+            linha = tk.Frame(info, bg="white")
+            linha.pack(fill="x", pady=4)
+
+            tk.Label(
+                linha,
+                text=titulo,
+                bg="white",
+                fg="#111827",
+                font=("Segoe UI", 11, "bold"),
+                width=9,
+                anchor="w",
+            ).pack(side="left")
+
+            tk.Label(
+                linha,
+                text=valor,
+                bg="white",
+                fg="#111827",
+                font=("Segoe UI", 11),
+                anchor="w",
+            ).pack(side="left", fill="x", expand=True)
+
+        botoes = tk.Frame(card, bg="white")
+        botoes.pack(fill="x", padx=18, pady=(8, 18))
+
+        tk.Button(
+            botoes,
+            text="OK",
+            bg="#0b63ce",
+            fg="white",
+            activebackground="#084ea3",
+            activeforeground="white",
+            bd=0,
+            highlightthickness=0,
+            relief="flat",
+            padx=35,
+            pady=8,
+            font=("Segoe UI", 10, "bold"),
+            command=janela.destroy,
+        ).pack(side="right")
+
+        janela.bind("<Return>", lambda event: janela.destroy())
+        janela.bind("<Escape>", lambda event: janela.destroy())
+        janela.focus_force()
 
     def buscar_orcamento_os(self):
         if not self.cliente_os_id:
