@@ -2302,6 +2302,48 @@ class OrcamentoPreview(tk.Toplevel):
             messagebox.showerror("Erro", f"Não foi possível salvar o orçamento:\n{e}")
             return False
 
+
+    def salvar_orcamento_impresso(self):
+        try:
+            con = db()
+            cur = con.cursor()
+
+            cur.execute(
+                """
+                INSERT INTO orcamentos_enviados (
+                    cliente_nome,
+                    telefone,
+                    veiculo,
+                    caminho_imagem,
+                    mao_de_obra,
+                    total_pecas,
+                    total_servicos,
+                    data_criacao,
+                    status_envio
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    self.nome_cliente,
+                    self.telefone,
+                    self.veiculo,
+                    self.caminho_imagem,
+                    self.mao_de_obra,
+                    self.total_pecas,
+                    self.total_servicos,
+                    datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                    "IMPRESSO",
+                ),
+            )
+
+            con.commit()
+            con.close()
+            return True
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Não foi possível salvar o orçamento impresso:\n{e}")
+            return False
+
     def mostrar_imagem(self):
         if not os.path.exists(self.caminho_imagem):
             messagebox.showerror("Erro", "Imagem do orçamento não encontrada.")
@@ -2491,6 +2533,14 @@ class OrcamentoPreview(tk.Toplevel):
     def imprimir_orcamento(self):
         if not os.path.exists(self.caminho_imagem):
             messagebox.showerror("Erro", "Imagem do orçamento não encontrada.")
+            return
+
+        caminho_salvo = self.salvar_imagem_na_pasta_orcamentos()
+
+        if not caminho_salvo:
+            return
+
+        if not self.salvar_orcamento_impresso():
             return
 
         try:
