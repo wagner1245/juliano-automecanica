@@ -3857,352 +3857,687 @@ class OrdemServicoFrame(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg="#f5f6f8")
         self.app = app
-        self.selected_client_id = None
-        self._resultados_busca = []
 
-        top = tk.Frame(self, bg="#f5f6f8")
-        top.pack(fill="x")
+        self.cliente_os_id = None
+
+        self.busca_cliente_os_var = tk.StringVar()
+        self.orcamento_os_var = tk.StringVar(value="Selecione um orçamento...")
+        self.mao_obra_os_var = tk.StringVar(value="0,00")
+
+        self.os_nome_var = tk.StringVar(value="-")
+        self.os_cpf_var = tk.StringVar(value="-")
+        self.os_telefone_var = tk.StringVar(value="-")
+        self.os_veiculo_var = tk.StringVar(value="-")
+        self.os_placa_var = tk.StringVar(value="-")
+        self.os_cidade_var = tk.StringVar(value="-")
+
+        self.os_total_pecas_var = tk.StringVar(value="R$ 0,00")
+        self.os_total_servicos_var = tk.StringVar(value="R$ 0,00")
+        self.os_total_geral_var = tk.StringVar(value="R$ 0,00")
+
+        self._montar_ordem_servico()
+
+    def _botao_os(self, parent, texto, cor, comando, padx=12, pady=5, largura=None):
+        return tk.Button(
+            parent,
+            text=texto,
+            command=comando,
+            bg=cor,
+            fg="white",
+            activebackground=cor,
+            activeforeground="white",
+            bd=0,
+            padx=padx,
+            pady=pady,
+            width=largura if largura else 0,
+            font=("Segoe UI", 9, "bold"),
+            cursor="hand2",
+        )
+
+    def _montar_ordem_servico(self):
         tk.Label(
-            top,
+            self,
             text="Ordem de Serviço",
             bg="#f5f6f8",
-            fg="#1f2a37",
-            font=("Segoe UI", 18, "bold"),
-        ).pack(side="left")
+            fg="#111827",
+            font=("Segoe UI", 20, "bold"),
+        ).pack(anchor="w", padx=10, pady=(0, 8))
 
-        style = ttk.Style()
-        style.theme_use("clam")
-        style.configure(
-            "OS.Treeview",
-            background="white",
-            foreground="black",
-            fieldbackground="white",
-            rowheight=24,
+        # Mesmo limite visual da tela de Orçamento.
+        # Não usa expand=True para não esticar o container principal.
+        self.os_card = tk.Frame(
+            self,
+            bg="white",
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+            width=900,
+            height=520,
         )
-        style.configure(
-            "OS.Treeview.Heading",
-            background="#f3f4f6",
-            foreground="#1f2937",
+        self.os_card.pack(anchor="w", padx=10, pady=(0, 14))
+        self.os_card.pack_propagate(False)
+
+        self._montar_topo_busca_os()
+        self._montar_dados_cliente_os()
+        self._montar_itens_os()
+        self._montar_totais_os()
+        self._montar_botoes_finais_os()
+
+    def _montar_topo_busca_os(self):
+        topo = tk.Frame(
+            self.os_card,
+            bg="white",
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+            height=102,
         )
+        topo.pack(fill="x", padx=16, pady=(12, 8))
+        topo.pack_propagate(False)
 
-        container = tk.Frame(self, bg="#f5f6f8", bd=1, relief="solid")
-        container.pack(fill="both", expand=True, padx=10, pady=(10, 0))
+        esquerda = tk.Frame(topo, bg="white")
+        esquerda.pack(side="left", fill="both", expand=True, padx=(14, 10), pady=10)
 
-        self.cliente_vinculado_var = tk.StringVar(value="Cliente vinculado: nenhum")
+        direita = tk.Frame(topo, bg="white")
+        direita.pack(side="right", fill="both", expand=True, padx=(10, 14), pady=10)
+
         tk.Label(
-            container,
-            textvariable=self.cliente_vinculado_var,
-            bg="#f5f6f8",
-            fg="#1f2937",
+            esquerda,
+            text="🔵  1 - BUSCAR CLIENTE",
+            bg="white",
+            fg="#0b63ce",
             font=("Segoe UI", 11, "bold"),
-        ).pack(anchor="w", padx=10, pady=(12, 8))
+        ).pack(anchor="w")
 
-        cols = ("id", "quantity", "description", "price")
-        self.tree = ttk.Treeview(
-            container,
+        tk.Label(
+            esquerda,
+            text="Informe CPF, Placa ou Nome",
+            bg="white",
+            fg="#111827",
+            font=("Segoe UI", 8),
+        ).pack(anchor="w", pady=(3, 6))
+
+        linha_cliente = tk.Frame(esquerda, bg="white")
+        linha_cliente.pack(fill="x")
+
+        self.busca_cliente_os_entry = tk.Entry(
+            linha_cliente,
+            textvariable=self.busca_cliente_os_var,
+            font=("Segoe UI", 9),
+            relief="solid",
+            bd=1,
+        )
+        self.busca_cliente_os_entry.pack(side="left", fill="x", expand=True, ipady=5)
+        self.busca_cliente_os_entry.bind("<Return>", lambda event: self.buscar_cliente_os())
+
+        self._botao_os(
+            linha_cliente,
+            "🔍 Buscar Cliente",
+            "#0b63ce",
+            self.buscar_cliente_os,
+            padx=10,
+            pady=6,
+        ).pack(side="left", padx=(8, 0))
+
+        tk.Label(
+            topo,
+            text="➡",
+            bg="white",
+            fg="#2563eb",
+            font=("Segoe UI", 24, "bold"),
+        ).place(relx=0.50, rely=0.62, anchor="center")
+
+        tk.Label(
+            direita,
+            text="📄  2 - BUSCAR ORÇAMENTO",
+            bg="white",
+            fg="#08803a",
+            font=("Segoe UI", 11, "bold"),
+        ).pack(anchor="w")
+
+        tk.Label(
+            direita,
+            text="Após selecionar o cliente",
+            bg="white",
+            fg="#111827",
+            font=("Segoe UI", 8),
+        ).pack(anchor="w", pady=(3, 6))
+
+        linha_orcamento = tk.Frame(direita, bg="white")
+        linha_orcamento.pack(fill="x")
+
+        self.combo_orcamentos_os = ttk.Combobox(
+            linha_orcamento,
+            textvariable=self.orcamento_os_var,
+            values=["Selecione um orçamento..."],
+            state="readonly",
+            font=("Segoe UI", 9),
+        )
+        self.combo_orcamentos_os.pack(side="left", fill="x", expand=True, ipady=4)
+
+        self._botao_os(
+            linha_orcamento,
+            "📂 Buscar",
+            "#08803a",
+            self.buscar_orcamento_os,
+            padx=10,
+            pady=6,
+        ).pack(side="left", padx=(8, 0))
+
+    def _montar_dados_cliente_os(self):
+        dados = tk.Frame(
+            self.os_card,
+            bg="white",
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+            height=100,
+        )
+        dados.pack(fill="x", padx=16, pady=(0, 8))
+        dados.pack_propagate(False)
+
+        tk.Label(
+            dados,
+            text="👤  DADOS DO CLIENTE",
+            bg="white",
+            fg="#0b63ce",
+            font=("Segoe UI", 11, "bold"),
+        ).pack(anchor="w", padx=14, pady=(8, 5))
+
+        corpo = tk.Frame(dados, bg="white")
+        corpo.pack(fill="x", padx=14, pady=(0, 4))
+
+        col1 = tk.Frame(corpo, bg="white")
+        col1.pack(side="left", fill="x", expand=True)
+        col2 = tk.Frame(corpo, bg="white")
+        col2.pack(side="left", fill="x", expand=True)
+        col3 = tk.Frame(corpo, bg="white")
+        col3.pack(side="left", fill="x", expand=True)
+
+        self._label_dado_os(col1, "Nome:", self.os_nome_var)
+        self._label_dado_os(col1, "Veículo:", self.os_veiculo_var)
+
+        self._label_dado_os(col2, "CPF:", self.os_cpf_var)
+        self._label_dado_os(col2, "Placa:", self.os_placa_var)
+
+        self._label_dado_os(col3, "Telefone:", self.os_telefone_var)
+        self._label_dado_os(col3, "Cidade:", self.os_cidade_var)
+
+        self._botao_os(
+            corpo,
+            "🖌 Alterar",
+            "#6b7280",
+            self.limpar_cliente_os,
+            padx=10,
+            pady=5,
+        ).pack(side="right", padx=(10, 0), anchor="s")
+
+    def _label_dado_os(self, parent, titulo, var):
+        box = tk.Frame(parent, bg="white")
+        box.pack(anchor="w", fill="x", pady=(0, 4))
+
+        tk.Label(
+            box,
+            text=titulo,
+            bg="white",
+            fg="#111827",
+            font=("Segoe UI", 9, "bold"),
+        ).pack(anchor="w")
+
+        tk.Label(
+            box,
+            textvariable=var,
+            bg="white",
+            fg="#111827",
+            font=("Segoe UI", 9),
+        ).pack(anchor="w")
+
+    def _montar_itens_os(self):
+        itens = tk.Frame(
+            self.os_card,
+            bg="white",
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+            height=198,
+        )
+        itens.pack(fill="x", padx=16, pady=(0, 8))
+        itens.pack_propagate(False)
+
+        tk.Label(
+            itens,
+            text="🔧  ITENS DA ORDEM DE SERVIÇO",
+            bg="white",
+            fg="#0b63ce",
+            font=("Segoe UI", 11, "bold"),
+        ).pack(anchor="w", padx=14, pady=(8, 6))
+
+        tabela_frame = tk.Frame(
+            itens,
+            bg="white",
+            highlightbackground="#cbd5e1",
+            highlightthickness=1,
+            height=105,
+        )
+        tabela_frame.pack(fill="x", padx=14, pady=(0, 6))
+        tabela_frame.pack_propagate(False)
+
+        cols = ("quantidade", "descricao", "valor_unitario", "valor_total")
+        self.os_tree = ttk.Treeview(
+            tabela_frame,
             columns=cols,
             show="headings",
-            style="OS.Treeview",
+            height=3,
         )
-        self.tree.tag_configure("linha1", background="white")
-        self.tree.tag_configure("linha2", background="#e6e6e6")
 
-        self.tree.heading("id", text="ID")
-        self.tree.column("id", width=0, stretch=False)
+        self.os_tree.heading("quantidade", text="QUANTIDADE", anchor="center")
+        self.os_tree.heading("descricao", text="DESCRIÇÃO DO SERVIÇO / PEÇA", anchor="center")
+        self.os_tree.heading("valor_unitario", text="VALOR UNITÁRIO (R$)", anchor="center")
+        self.os_tree.heading("valor_total", text="VALOR TOTAL (R$)", anchor="center")
 
-        for c, t, w, a in [
-            ("quantity", "QUANTIDADE", 120, "center"),
-            ("description", "DESCRIÇÃO", 450, "center"),
-            ("price", "VALOR (R$)", 140, "center"),
-        ]:
-            self.tree.heading(c, text=t, anchor="center")
-            self.tree.column(c, width=w, anchor=a)
+        self.os_tree.column("quantidade", width=150, anchor="center", stretch=True)
+        self.os_tree.column("descricao", width=360, anchor="center", stretch=True)
+        self.os_tree.column("valor_unitario", width=190, anchor="center", stretch=True)
+        self.os_tree.column("valor_total", width=190, anchor="center", stretch=True)
 
-        self.tree.pack(fill="both", expand=True, padx=10, pady=(0, 7))
+        self.os_tree.pack(side="left", fill="both", expand=True)
 
-        linha1 = tk.Frame(container, bg="#f5f6f8")
-        linha1.pack(fill="x", padx=10, pady=(0, 8))
+        scrollbar = ttk.Scrollbar(tabela_frame, orient="vertical", command=self.os_tree.yview)
+        self.os_tree.configure(yscrollcommand=scrollbar.set)
+        scrollbar.pack(side="right", fill="y")
 
-        tk.Label(
-            linha1,
-            text="Buscar (Placa / CPF / Nome):",
-            bg="#f5f6f8",
-            font=("Segoe UI", 10, "bold"),
-        ).pack(side="left", padx=(0, 5))
-
-        self.search_var = tk.StringVar()
-        self.search_var.trace_add("write", lambda *args: self.buscar_cliente())
-
-        self.search_entry = tk.Entry(
-            linha1,
-            textvariable=self.search_var,
+        self.os_empty_label = tk.Label(
+            self.os_tree,
+            text="Nenhum item adicionado",
+            bg="white",
+            fg="#6b7280",
             font=("Segoe UI", 10),
-            width=18,
         )
-        self.search_entry.pack(side="left", padx=(0, 10))
+        self.os_tree.bind("<Configure>", lambda event: self._atualizar_mensagem_vazia_os())
+        self._atualizar_mensagem_vazia_os()
 
-        tk.Button(linha1, text="Adicionar", command=self.add_dialog).pack(side="left", padx=5)
-        tk.Button(linha1, text="Editar", command=self.edit_dialog).pack(side="left", padx=5)
-        tk.Button(linha1, text="Excluir", command=self.delete_selected).pack(side="left", padx=5)
+        botoes = tk.Frame(itens, bg="white")
+        botoes.pack(fill="x", padx=14, pady=(0, 0))
 
-        self.sugestoes = tk.Listbox(container, height=4, font=("Segoe UI", 10))
-        self.sugestoes.pack(fill="x", padx=10, pady=(0, 5))
-        self.sugestoes.pack_forget()
-        self.sugestoes.bind("<<ListboxSelect>>", self.selecionar_sugestao)
+        self._botao_os(botoes, "+  Adicionar Item", "#08803a", self.adicionar_item_os, largura=15).pack(side="left", padx=(0, 8))
+        self._botao_os(botoes, "✎  Editar Item", "#0b63ce", self.editar_item_os, largura=13).pack(side="left", padx=(0, 8))
+        self._botao_os(botoes, "🗑  Excluir Item", "#ef233c", self.excluir_item_os, largura=13).pack(side="left", padx=(0, 8))
+        self._botao_os(botoes, "🖌  Limpar Todos", "#6b7280", self.limpar_itens_os, largura=14).pack(side="right")
 
-        linha2 = tk.Frame(container, bg="#f5f6f8")
-        linha2.pack(fill="x", padx=10, pady=(0, 7))
-
-        tk.Label(
-            linha2,
-            text="Mão de Obra:",
-            bg="#f5f6f8",
-            font=("Segoe UI", 10, "bold"),
-        ).pack(side="left", padx=(0, 5))
-
-        self.mao_obra_var = tk.StringVar()
-        self.mao_obra = tk.Entry(
-            linha2,
-            textvariable=self.mao_obra_var,
-            width=10,
-            justify="center",
+    def _montar_totais_os(self):
+        totais = tk.Frame(
+            self.os_card,
+            bg="#f8fafc",
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+            height=58,
         )
-        self.mao_obra.pack(side="left", padx=(0, 20))
-        self.mao_obra_var.trace_add("write", lambda *args: self.atualizar_totais())
+        totais.pack(fill="x", padx=16, pady=(0, 8))
+        totais.pack_propagate(False)
 
-        tk.Label(
-            linha2,
-            text="Total de Peças:",
-            bg="#f5f6f8",
-            font=("Segoe UI", 10, "bold"),
-        ).pack(side="left", padx=(0, 5))
+        linha = tk.Frame(totais, bg="#f8fafc")
+        linha.pack(fill="both", expand=True, padx=14, pady=9)
 
-        self.total_pecas_var = tk.StringVar(value="R$ 0,00")
-        self.total_pecas = tk.Label(
-            linha2,
-            textvariable=self.total_pecas_var,
-            bg="#f5f6f8",
-            fg="#1f2937",
-            font=("Segoe UI", 11, "bold"),
+        tk.Label(linha, text="Mão de Obra:", bg="#f8fafc", fg="#111827", font=("Segoe UI", 9, "bold")).pack(side="left")
+
+        self.mao_obra_os_entry = tk.Entry(
+            linha,
+            textvariable=self.mao_obra_os_var,
+            width=9,
+            justify="right",
+            font=("Segoe UI", 9),
+            relief="solid",
+            bd=1,
         )
-        self.total_pecas.pack(side="left", padx=(0, 20))
+        self.mao_obra_os_entry.pack(side="left", padx=(6, 22), ipady=3)
+        self.mao_obra_os_entry.bind("<KeyRelease>", lambda event: self.atualizar_totais_os())
+        self.mao_obra_os_entry.bind("<FocusOut>", lambda event: self._formatar_mao_obra_os())
 
-        tk.Label(
-            linha2,
-            text="Total de Serviços:",
-            bg="#f5f6f8",
-            font=("Segoe UI", 10, "bold"),
-        ).pack(side="left", padx=(0, 5))
+        self._total_os_label(linha, "Total de Peças:", self.os_total_pecas_var, "#111827")
+        self._total_os_label(linha, "Total de Serviços:", self.os_total_servicos_var, "#08803a")
 
-        self.total_servicos = tk.Label(
-            linha2,
-            text="R$ 0,00",
-            bg="#f5f6f8",
-            fg="green",
-            font=("Segoe UI", 11, "bold"),
-        )
-        self.total_servicos.pack(side="left")
+        tk.Label(linha, text="TOTAL GERAL:", bg="#f8fafc", fg="#111827", font=("Segoe UI", 11, "bold")).pack(side="left", padx=(25, 8))
+        tk.Label(linha, textvariable=self.os_total_geral_var, bg="#f8fafc", fg="#0b63ce", font=("Segoe UI", 13, "bold")).pack(side="left")
 
-    def buscar_cliente(self):
-        termo_original = self.search_var.get().strip()
-        termo_maiusculo = termo_original.upper()
-        termo_cpf = "".join(ch for ch in termo_original if ch.isdigit())
+    def _total_os_label(self, parent, titulo, var, cor):
+        tk.Label(parent, text=titulo, bg="#f8fafc", fg="#111827", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 6))
+        tk.Label(parent, textvariable=var, bg="#f8fafc", fg=cor, font=("Segoe UI", 10, "bold")).pack(side="left", padx=(0, 20))
 
-        self.sugestoes.delete(0, tk.END)
-        self._resultados_busca = []
+    def _montar_botoes_finais_os(self):
+        botoes = tk.Frame(self.os_card, bg="white")
+        botoes.pack(fill="x", padx=16, pady=(0, 0))
 
-        if not termo_original:
-            self.sugestoes.pack_forget()
-            self.cliente_vinculado_var.set("Cliente vinculado: nenhum")
-            self.selected_client_id = None
+        self._botao_os(
+            botoes,
+            "💾  Salvar Ordem de Serviço",
+            "#08803a",
+            self.salvar_os,
+            padx=20,
+            pady=7,
+        ).pack(side="right")
+
+        self._botao_os(
+            botoes,
+            "🖨  Imprimir OS",
+            "#6b7280",
+            self.imprimir_os,
+            padx=18,
+            pady=7,
+        ).pack(side="right", padx=(0, 12))
+
+    def _normalizar_busca_os(self, valor):
+        return "".join(ch for ch in str(valor or "").upper() if ch.isalnum())
+
+    def buscar_cliente_os(self):
+        termo = self.busca_cliente_os_var.get().strip()
+        termo_numero = "".join(ch for ch in termo if ch.isdigit())
+        termo_placa = self._normalizar_busca_os(termo)
+        termo_nome = termo.upper()
+
+        if not termo:
+            messagebox.showwarning("Atenção", "Digite CPF, placa ou nome do cliente.")
             return
 
-        con = db()
-        cur = con.cursor()
-        cur.execute(
-            """
-            SELECT id, cpf, plate, name, vehicle
-            FROM clients
-            WHERE
-                REPLACE(REPLACE(REPLACE(COALESCE(cpf, ''), '.', ''), '-', ''), '/', '') LIKE ?
-                OR UPPER(COALESCE(name, '')) LIKE ?
-                OR UPPER(COALESCE(plate, '')) LIKE ?
-            ORDER BY name
-            LIMIT 10
-            """,
-            (
-                f"{termo_cpf}%" if termo_cpf else "",
-                f"{termo_maiusculo}%",
-                f"{termo_maiusculo}%",
-            ),
-        )
-        resultados = cur.fetchall()
-        con.close()
+        try:
+            con = db()
+            cur = con.cursor()
 
-        if not resultados:
-            self.sugestoes.pack_forget()
-            return
-
-        self._resultados_busca = resultados
-        for client_id, cpf, plate, name, vehicle in resultados:
-            texto = (
-                f"CPF: {cpf or '-'} | PLACA: {plate or '-'} | "
-                f"NOME: {name or '-'} | VEÍCULO: {vehicle or '-'}"
+            cur.execute(
+                """
+                SELECT c.id, c.cpf, c.name, c.phone, c.city,
+                       v.plate, v.vehicle
+                FROM clients c
+                LEFT JOIN vehicles v ON v.client_id = c.id
+                WHERE c.cpf = ?
+                   OR c.phone = ?
+                   OR UPPER(c.name) LIKE ?
+                   OR UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) LIKE ?
+                ORDER BY c.name
+                LIMIT 1
+                """,
+                (termo_numero, termo_numero, f"%{termo_nome}%", f"{termo_placa}%"),
             )
-            self.sugestoes.insert(tk.END, texto)
 
-        self.sugestoes.pack(fill="x", padx=10, pady=(0, 5))
+            cliente = cur.fetchone()
+            con.close()
 
-    def selecionar_sugestao(self, event=None):
-        selecao = self.sugestoes.curselection()
-        if not selecao:
+            if not cliente:
+                messagebox.showwarning("Atenção", "Cliente não encontrado.")
+                return
+
+            self.carregar_cliente_na_os(cliente)
+
+        except Exception as e:
+            messagebox.showerror("Erro", f"Não foi possível buscar o cliente:\n{e}")
+
+    def carregar_cliente_na_os(self, cliente):
+        cliente_id, cpf, nome, telefone, cidade, placa, veiculo = cliente
+
+        self.cliente_os_id = cliente_id
+        self.os_nome_var.set(str(nome or "-").strip().upper())
+        self.os_cpf_var.set(str(cpf or "-").strip())
+        self.os_telefone_var.set(str(telefone or "-").strip())
+        self.os_cidade_var.set(str(cidade or "-").strip().upper())
+        self.os_placa_var.set(str(placa or "-").strip().upper())
+        self.os_veiculo_var.set(str(veiculo or "-").strip().upper())
+
+        nome_txt = self.os_nome_var.get()
+        placa_txt = self.os_placa_var.get()
+        self.combo_orcamentos_os.configure(
+            values=["Selecione um orçamento...", f"Último orçamento - {nome_txt} - {placa_txt}"]
+        )
+        self.orcamento_os_var.set("Selecione um orçamento...")
+
+        messagebox.showinfo("Sucesso", "Cliente localizado e vinculado à ordem de serviço.")
+
+    def buscar_orcamento_os(self):
+        if not self.cliente_os_id:
+            messagebox.showwarning("Atenção", "Busque e selecione um cliente primeiro.")
             return
 
-        indice = selecao[0]
-        if indice >= len(self._resultados_busca):
+        messagebox.showinfo("Orçamento", "Busca de orçamento será integrada na próxima etapa.")
+
+    def limpar_cliente_os(self):
+        self.cliente_os_id = None
+        self.busca_cliente_os_var.set("")
+        self.orcamento_os_var.set("Selecione um orçamento...")
+        self.combo_orcamentos_os.configure(values=["Selecione um orçamento..."])
+
+        for var in (
+            self.os_nome_var,
+            self.os_cpf_var,
+            self.os_telefone_var,
+            self.os_veiculo_var,
+            self.os_placa_var,
+            self.os_cidade_var,
+        ):
+            var.set("-")
+
+    def _valor_para_float_os(self, valor):
+        texto = str(valor or "").replace("R$", "").replace(".", "").replace(",", ".").strip()
+        try:
+            return float(texto) if texto else 0.0
+        except Exception:
+            return 0.0
+
+    def _formatar_moeda_os(self, valor):
+        return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def _formatar_valor_digitado_os(self, valor):
+        texto = "".join(ch for ch in str(valor or "") if ch.isdigit())
+        if not texto:
+            return "0,00"
+        numero = int(texto) / 100
+        return f"{numero:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+    def _formatar_mao_obra_os(self):
+        self.mao_obra_os_var.set(self._formatar_valor_digitado_os(self.mao_obra_os_var.get()))
+        self.atualizar_totais_os()
+
+    def adicionar_item_os(self):
+        ItemOSDialog(self, titulo="Adicionar Item")
+
+    def editar_item_os(self):
+        selecionado = self.os_tree.selection()
+        if not selecionado:
+            messagebox.showwarning("Atenção", "Selecione um item para editar.")
             return
 
-        client_id, cpf, plate, name, vehicle = self._resultados_busca[indice]
+        valores = self.os_tree.item(selecionado[0], "values")
+        ItemOSDialog(self, titulo="Editar Item", item_id=selecionado[0], valores=valores)
 
-        self.selected_client_id = client_id
-        self.cliente_vinculado_var.set(f"Cliente vinculado: {name or 'nenhum'}")
+    def excluir_item_os(self):
+        selecionado = self.os_tree.selection()
+        if not selecionado:
+            messagebox.showwarning("Atenção", "Selecione um item para excluir.")
+            return
 
-        self.search_var.set("")
-        self.sugestoes.pack_forget()
+        if not messagebox.askyesno("Confirmar exclusão", "Deseja realmente excluir este item?"):
+            return
 
-    def atualizar_totais(self):
+        self.os_tree.delete(selecionado[0])
+        self.atualizar_totais_os()
+        self._atualizar_mensagem_vazia_os()
+
+    def limpar_itens_os(self):
+        if not self.os_tree.get_children():
+            return
+
+        if not messagebox.askyesno("Confirmar limpeza", "Deseja remover todos os itens da ordem de serviço?"):
+            return
+
+        for item in self.os_tree.get_children():
+            self.os_tree.delete(item)
+
+        self.atualizar_totais_os()
+        self._atualizar_mensagem_vazia_os()
+
+    def salvar_item_os(self, quantidade, descricao, valor_unitario, item_id=None):
+        quantidade = str(quantidade).strip()
+        descricao = str(descricao).strip().upper()
+        valor_unitario = str(valor_unitario).strip()
+
+        if not quantidade or not quantidade.isdigit():
+            messagebox.showwarning("Atenção", "Informe uma quantidade válida.")
+            return False
+
+        if not descricao:
+            messagebox.showwarning("Atenção", "Informe a descrição.")
+            return False
+
+        valor_unitario_fmt = self._formatar_valor_digitado_os(valor_unitario)
+        valor_total = int(quantidade) * self._valor_para_float_os(valor_unitario_fmt)
+        valor_total_fmt = f"{valor_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
+
+        valores = (quantidade, descricao, valor_unitario_fmt, valor_total_fmt)
+
+        if item_id:
+            self.os_tree.item(item_id, values=valores)
+        else:
+            self.os_tree.insert("", "end", values=valores)
+
+        self.atualizar_totais_os()
+        self._atualizar_mensagem_vazia_os()
+        return True
+
+    def atualizar_totais_os(self):
         total_pecas = 0.0
 
-        for item in self.tree.get_children():
-            valores = self.tree.item(item, "values")
+        for item in self.os_tree.get_children():
+            valores = self.os_tree.item(item, "values")
             if len(valores) >= 4:
-                valor_str = str(valores[3]).strip()
-                try:
-                    valor_str = valor_str.replace("R$", "").replace(" ", "")
-                    valor_str = valor_str.replace(".", "").replace(",", ".")
-                    preco = float(valor_str)
-                    total_pecas += preco
-                except Exception:
-                    pass
+                total_pecas += self._valor_para_float_os(valores[3])
 
-        texto = self.mao_obra_var.get().strip()
-        try:
-            texto = texto.replace("R$", "").replace(" ", "")
-            texto = texto.replace(".", "").replace(",", ".")
-            mao_obra = float(texto) if texto else 0.0
-        except Exception:
-            mao_obra = 0.0
+        mao_obra = self._valor_para_float_os(self.mao_obra_os_var.get())
+        total_servicos = mao_obra
+        total_geral = total_pecas + total_servicos
 
-        total_servicos = mao_obra + total_pecas
-        self.total_pecas_var.set(f"R$ {total_pecas:.2f}".replace(".", ","))
-        self.total_servicos.config(text=f"R$ {total_servicos:.2f}".replace(".", ","))
+        self.os_total_pecas_var.set(self._formatar_moeda_os(total_pecas))
+        self.os_total_servicos_var.set(self._formatar_moeda_os(total_servicos))
+        self.os_total_geral_var.set(self._formatar_moeda_os(total_geral))
 
-    def _selected_id(self):
-        sel = self.tree.selection()
-        if not sel:
-            return None
-        return int(self.tree.item(sel[0], "values")[0])
+    def _atualizar_mensagem_vazia_os(self):
+        if self.os_tree.get_children():
+            self.os_empty_label.place_forget()
+        else:
+            self.os_empty_label.place(relx=0.5, rely=0.5, anchor="center")
 
-    def _proximo_id_tree(self):
-        maior = 0
-        for item in self.tree.get_children():
-            try:
-                atual = int(self.tree.item(item, "values")[0])
-                if atual > maior:
-                    maior = atual
-            except Exception:
-                pass
-        return maior + 1
+    def imprimir_os(self):
+        messagebox.showinfo("Em desenvolvimento", "A impressão da OS será criada na próxima etapa.")
 
-    def add_dialog(self):
-        ServiceDialog(self, title="Adicionar Serviço", on_save=self._insert_manual)
-
-    def edit_dialog(self):
-        sid = self._selected_id()
-        if not sid:
-            messagebox.showwarning("Atenção", "Selecione um serviço.")
+    def salvar_os(self):
+        if not self.cliente_os_id:
+            messagebox.showwarning("Atenção", "Selecione um cliente antes de salvar a OS.")
             return
 
-        item_selecionado = self.tree.selection()[0]
-        valores = self.tree.item(item_selecionado, "values")
-        if len(valores) < 4:
-            messagebox.showwarning("Atenção", "Serviço inválido.")
-            return
-
-        initial = (
-            float(str(valores[1]).replace(",", ".")),
-            valores[2],
-            float(str(valores[3]).replace(".", "").replace(",", ".")),
-        )
-
-        ServiceDialog(
-            self,
-            title="Editar Serviço",
-            initial=initial,
-            on_save=lambda data: self._update_manual(item_selecionado, sid, data),
-        )
-
-    def _insert_manual(self, data):
-        quantidade = float(data[0])
-
-        if quantidade.is_integer():
-            quantidade = int(quantidade)
-
-        descricao = data[1]
-        preco = float(data[2])
-
-        novo_id = self._proximo_id_tree()
-        tag = "linha1" if (len(self.tree.get_children()) % 2 == 0) else "linha2"
-
-        self.tree.insert(
-            "",
-            "end",
-            values=(
-                novo_id,
-                quantidade,
-                descricao,
-                f"{preco:.2f}".replace(".", ","),
-            ),
-            tags=(tag,),
-        )
-        self.atualizar_totais()
-
-    def _update_manual(self, item_id, sid, data):
-        quantidade = float(data[0])
-
-        if quantidade.is_integer():
-            quantidade = int(quantidade)
-
-        descricao = data[1]
-        preco = float(data[2])
-
-        tags = self.tree.item(item_id, "tags")
-        self.tree.item(
-            item_id,
-            values=(sid, quantidade, descricao, f"{preco:.2f}".replace(".", ",")),
-            tags=tags,
-        )
-        self.atualizar_totais()
-
-    def delete_selected(self):
-        sel = self.tree.selection()
-        if not sel:
-            messagebox.showwarning("Atenção", "Selecione um serviço.")
-            return
-
-        if not messagebox.askyesno(
-            "Confirmação",
-            "Tem certeza que deseja excluir este serviço?",
-        ):
-            return
-
-        for item in sel:
-            self.tree.delete(item)
-
-        self.atualizar_totais()
+        messagebox.showinfo("Sucesso", "Ordem de Serviço pronta para salvar no banco na próxima etapa.")
 
     def refresh(self):
-        self.atualizar_totais()
+        pass
+
+
+class ItemOSDialog(tk.Toplevel):
+    def __init__(self, parent, titulo="Adicionar Item", item_id=None, valores=None):
+        super().__init__(parent)
+        self.parent = parent
+        self.item_id = item_id
+
+        self.title(titulo)
+        self.geometry("400x250")
+        self.resizable(False, False)
+        self.configure(bg="#f5f6f8")
+        self.grab_set()
+
+        self.quantidade_var = tk.StringVar(value=valores[0] if valores else "")
+        self.descricao_var = tk.StringVar(value=valores[1] if valores else "")
+        self.valor_var = tk.StringVar(value=valores[2] if valores else "")
+
+        self.descricao_var.trace_add("write", lambda *args: self._maiusculo_var(self.descricao_var))
+
+        frame = tk.Frame(self, bg="#f5f6f8", padx=20, pady=18)
+        frame.pack(fill="both", expand=True)
+
+        tk.Label(
+            frame,
+            text=titulo,
+            bg="#f5f6f8",
+            fg="#111827",
+            font=("Segoe UI", 13, "bold"),
+        ).pack(anchor="w", pady=(0, 12))
+
+        self._campo(frame, "Quantidade:", self.quantidade_var)
+        self._campo(frame, "Descrição do Serviço / Peça:", self.descricao_var)
+        self._campo(frame, "Valor Unitário:", self.valor_var)
+
+        botoes = tk.Frame(frame, bg="#f5f6f8")
+        botoes.pack(fill="x", pady=(12, 0))
+
+        tk.Button(
+            botoes,
+            text="Salvar",
+            bg="#08803a",
+            fg="white",
+            activebackground="#06632d",
+            activeforeground="white",
+            bd=0,
+            padx=16,
+            pady=6,
+            font=("Segoe UI", 10, "bold"),
+            command=self.salvar,
+        ).pack(side="left", padx=(0, 10))
+
+        tk.Button(
+            botoes,
+            text="Cancelar",
+            bg="#6b7280",
+            fg="white",
+            activebackground="#4b5563",
+            activeforeground="white",
+            bd=0,
+            padx=16,
+            pady=6,
+            font=("Segoe UI", 10, "bold"),
+            command=self.destroy,
+        ).pack(side="left")
+
+        self.update_idletasks()
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        x = (sw // 2) - (self.winfo_width() // 2)
+        y = (sh // 2) - (self.winfo_height() // 2)
+        self.geometry(f"+{x}+{y}")
+
+    def _campo(self, parent, label, var):
+        tk.Label(
+            parent,
+            text=label,
+            bg="#f5f6f8",
+            fg="#111827",
+            font=("Segoe UI", 10, "bold"),
+        ).pack(anchor="w")
+
+        entrada = tk.Entry(
+            parent,
+            textvariable=var,
+            font=("Segoe UI", 10),
+            relief="solid",
+            bd=1,
+        )
+        entrada.pack(fill="x", pady=(4, 8), ipady=4)
+        return entrada
+
+    def _maiusculo_var(self, var):
+        texto = var.get()
+        texto_maiusculo = texto.upper()
+        if texto != texto_maiusculo:
+            var.set(texto_maiusculo)
+
+    def salvar(self):
+        ok = self.parent.salvar_item_os(
+            self.quantidade_var.get(),
+            self.descricao_var.get(),
+            self.valor_var.get(),
+            self.item_id,
+        )
+
+        if ok:
+            self.destroy()
 
 
 class OrdersFrame(tk.Frame):
