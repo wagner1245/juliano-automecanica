@@ -4090,7 +4090,6 @@ class OrdemServicoFrame(tk.Frame):
         self._botao_os(botoes, "✎  Editar Item", "#0b63ce", self.editar_item_os, largura=13).pack(side="left", padx=(0, 8))
         self._botao_os(botoes, "🗑  Excluir Item", "#ef233c", self.excluir_item_os, largura=13).pack(side="left", padx=(0, 8))
         self._botao_os(botoes, "🖨  Imprimir OS", "#6b7280", self.imprimir_os, largura=14).pack(side="left", padx=(0, 8))
-        self._botao_os(botoes, "🖌  Limpar Todos", "#6b7280", self.limpar_itens_os, largura=14).pack(side="right")
 
     def _total_os_label(self, parent, titulo, var, cor):
         tk.Label(parent, text=titulo, bg="#f8fafc", fg="#111827", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 6))
