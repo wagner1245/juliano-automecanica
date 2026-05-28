@@ -2384,11 +2384,17 @@ class OrcamentoPreview(tk.Toplevel):
                 if ch.isalnum() or ch in (" ", "_", "-")
             ).strip().replace(" ", "_")
 
-            data_arquivo = datetime.now().strftime("%Y%m%d_%H%M%S")
-            nome_arquivo = f"ORCAMENTO_{nome_cliente_limpo}_{veiculo_limpo}_{data_arquivo}.jpg"
-
+            base_nome = f"{nome_cliente_limpo}_{veiculo_limpo}"
+            nome_arquivo = f"{base_nome}.jpg"
             caminho_destino = os.path.join(pasta_orcamentos, nome_arquivo)
-            shutil.copy2(self.caminho_imagem, caminho_destino)
+
+            contador = 1
+            while os.path.exists(caminho_destino):
+                nome_arquivo = f"{base_nome}_{contador}.jpg"
+                caminho_destino = os.path.join(pasta_orcamentos, nome_arquivo)
+                contador += 1
+
+            shutil.copy(self.caminho_imagem, caminho_destino)
 
             self.caminho_imagem = caminho_destino
             return caminho_destino
