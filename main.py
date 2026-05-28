@@ -3917,9 +3917,7 @@ class OrdemServicoFrame(tk.Frame):
         self.os_card.pack_propagate(False)
 
         self._montar_topo_busca_os()
-        self._montar_dados_cliente_os()
         self._montar_itens_os()
-        self._montar_totais_os()
         self._montar_botoes_finais_os()
 
     def _montar_topo_busca_os(self):
@@ -4022,80 +4020,13 @@ class OrdemServicoFrame(tk.Frame):
             pady=6,
         ).pack(side="left", padx=(8, 0))
 
-    def _montar_dados_cliente_os(self):
-        dados = tk.Frame(
-            self.os_card,
-            bg="white",
-            highlightbackground="#d7dce2",
-            highlightthickness=1,
-            height=100,
-        )
-        dados.pack(fill="x", padx=16, pady=(0, 8))
-        dados.pack_propagate(False)
-
-        tk.Label(
-            dados,
-            text="👤  DADOS DO CLIENTE",
-            bg="white",
-            fg="#0b63ce",
-            font=("Segoe UI", 11, "bold"),
-        ).pack(anchor="w", padx=14, pady=(8, 5))
-
-        corpo = tk.Frame(dados, bg="white")
-        corpo.pack(fill="x", padx=14, pady=(0, 4))
-
-        col1 = tk.Frame(corpo, bg="white")
-        col1.pack(side="left", fill="x", expand=True)
-        col2 = tk.Frame(corpo, bg="white")
-        col2.pack(side="left", fill="x", expand=True)
-        col3 = tk.Frame(corpo, bg="white")
-        col3.pack(side="left", fill="x", expand=True)
-
-        self._label_dado_os(col1, "Nome:", self.os_nome_var)
-        self._label_dado_os(col1, "Veículo:", self.os_veiculo_var)
-
-        self._label_dado_os(col2, "CPF:", self.os_cpf_var)
-        self._label_dado_os(col2, "Placa:", self.os_placa_var)
-
-        self._label_dado_os(col3, "Telefone:", self.os_telefone_var)
-        self._label_dado_os(col3, "Cidade:", self.os_cidade_var)
-
-        self._botao_os(
-            corpo,
-            "🖌 Alterar",
-            "#6b7280",
-            self.limpar_cliente_os,
-            padx=10,
-            pady=5,
-        ).pack(side="right", padx=(10, 0), anchor="s")
-
-    def _label_dado_os(self, parent, titulo, var):
-        box = tk.Frame(parent, bg="white")
-        box.pack(anchor="w", fill="x", pady=(0, 4))
-
-        tk.Label(
-            box,
-            text=titulo,
-            bg="white",
-            fg="#111827",
-            font=("Segoe UI", 9, "bold"),
-        ).pack(anchor="w")
-
-        tk.Label(
-            box,
-            textvariable=var,
-            bg="white",
-            fg="#111827",
-            font=("Segoe UI", 9),
-        ).pack(anchor="w")
-
     def _montar_itens_os(self):
         itens = tk.Frame(
             self.os_card,
             bg="white",
             highlightbackground="#d7dce2",
             highlightthickness=1,
-            height=198,
+            height=360,
         )
         itens.pack(fill="x", padx=16, pady=(0, 8))
         itens.pack_propagate(False)
@@ -4113,7 +4044,7 @@ class OrdemServicoFrame(tk.Frame):
             bg="white",
             highlightbackground="#cbd5e1",
             highlightthickness=1,
-            height=105,
+            height=265,
         )
         tabela_frame.pack(fill="x", padx=14, pady=(0, 6))
         tabela_frame.pack_propagate(False)
@@ -4123,7 +4054,7 @@ class OrdemServicoFrame(tk.Frame):
             tabela_frame,
             columns=cols,
             show="headings",
-            height=3,
+            height=10,
         )
 
         self.os_tree.heading("quantidade", text="QUANTIDADE", anchor="center")
@@ -4158,46 +4089,13 @@ class OrdemServicoFrame(tk.Frame):
         self._botao_os(botoes, "+  Adicionar Item", "#08803a", self.adicionar_item_os, largura=15).pack(side="left", padx=(0, 8))
         self._botao_os(botoes, "✎  Editar Item", "#0b63ce", self.editar_item_os, largura=13).pack(side="left", padx=(0, 8))
         self._botao_os(botoes, "🗑  Excluir Item", "#ef233c", self.excluir_item_os, largura=13).pack(side="left", padx=(0, 8))
+        self._botao_os(botoes, "🖨  Imprimir OS", "#6b7280", self.imprimir_os, largura=14).pack(side="left", padx=(0, 8))
         self._botao_os(botoes, "🖌  Limpar Todos", "#6b7280", self.limpar_itens_os, largura=14).pack(side="right")
-
-    def _montar_totais_os(self):
-        totais = tk.Frame(
-            self.os_card,
-            bg="#f8fafc",
-            highlightbackground="#d7dce2",
-            highlightthickness=1,
-            height=58,
-        )
-        totais.pack(fill="x", padx=16, pady=(0, 8))
-        totais.pack_propagate(False)
-
-        linha = tk.Frame(totais, bg="#f8fafc")
-        linha.pack(fill="both", expand=True, padx=14, pady=9)
-
-        tk.Label(linha, text="Mão de Obra:", bg="#f8fafc", fg="#111827", font=("Segoe UI", 9, "bold")).pack(side="left")
-
-        self.mao_obra_os_entry = tk.Entry(
-            linha,
-            textvariable=self.mao_obra_os_var,
-            width=9,
-            justify="right",
-            font=("Segoe UI", 9),
-            relief="solid",
-            bd=1,
-        )
-        self.mao_obra_os_entry.pack(side="left", padx=(6, 22), ipady=3)
-        self.mao_obra_os_entry.bind("<KeyRelease>", lambda event: self.atualizar_totais_os())
-        self.mao_obra_os_entry.bind("<FocusOut>", lambda event: self._formatar_mao_obra_os())
-
-        self._total_os_label(linha, "Total de Peças:", self.os_total_pecas_var, "#111827")
-        self._total_os_label(linha, "Total de Serviços:", self.os_total_servicos_var, "#08803a")
-
-        tk.Label(linha, text="TOTAL GERAL:", bg="#f8fafc", fg="#111827", font=("Segoe UI", 11, "bold")).pack(side="left", padx=(25, 8))
-        tk.Label(linha, textvariable=self.os_total_geral_var, bg="#f8fafc", fg="#0b63ce", font=("Segoe UI", 13, "bold")).pack(side="left")
 
     def _total_os_label(self, parent, titulo, var, cor):
         tk.Label(parent, text=titulo, bg="#f8fafc", fg="#111827", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 6))
         tk.Label(parent, textvariable=var, bg="#f8fafc", fg=cor, font=("Segoe UI", 10, "bold")).pack(side="left", padx=(0, 20))
+
 
     def _montar_botoes_finais_os(self):
         botoes = tk.Frame(self.os_card, bg="white")
@@ -4205,21 +4103,12 @@ class OrdemServicoFrame(tk.Frame):
 
         self._botao_os(
             botoes,
-            "💾  Salvar Ordem de Serviço",
+            "💾  Salvar OS",
             "#08803a",
             self.salvar_os,
             padx=20,
             pady=7,
         ).pack(side="right")
-
-        self._botao_os(
-            botoes,
-            "🖨  Imprimir OS",
-            "#6b7280",
-            self.imprimir_os,
-            padx=18,
-            pady=7,
-        ).pack(side="right", padx=(0, 12))
 
     def _normalizar_busca_os(self, valor):
         return "".join(ch for ch in str(valor or "").upper() if ch.isalnum())
