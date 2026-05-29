@@ -170,7 +170,7 @@ class App(tk.Tk):
             print("Erro ao carregar logo:", e)
 
         self.frames = {}
-        for F in (DashboardFrame, ClientsFrame, ServicesFrame, OrdemServicoFrame, OrdersFrame, FinanceFrame):
+        for F in (DashboardFrame, ClientsFrame, ServicesFrame, OrdemServicoFrame, NotasFiscaisFrame, OrdersFrame, FinanceFrame):
             frame = F(self.content, self)
             self.frames[F.__name__] = frame
             frame.grid(row=0, column=0, sticky="nsew")
@@ -242,6 +242,7 @@ class App(tk.Tk):
         self._nav_btn("🏠  Orçamento", "ServicesFrame")
         self._nav_btn("👤  Clientes", "ClientsFrame")
         self._nav_btn("🔧  Ordem de Serviço", "OrdemServicoFrame")
+        self._nav_btn("🧾  Notas Fiscais", "NotasFiscaisFrame")
         self._nav_btn("💰  Financeiro", "FinanceFrame")
 
         tk.Frame(self.sidebar, bg="#243246").pack(fill="both", expand=True)
@@ -4534,6 +4535,170 @@ class ItemOSDialog(tk.Toplevel):
 
         if ok:
             self.destroy()
+
+
+
+class NotasFiscaisFrame(tk.Frame):
+    def __init__(self, parent, app):
+        super().__init__(parent, bg="#f5f6f8")
+        self.app = app
+
+        tk.Label(
+            self,
+            text="Notas Fiscais",
+            bg="#f5f6f8",
+            fg="#111827",
+            font=("Segoe UI", 20, "bold"),
+        ).pack(anchor="w", padx=10, pady=(0, 10))
+
+        main_card = tk.Frame(
+            self,
+            bg="white",
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+            width=900,
+            height=520,
+        )
+        main_card.pack(anchor="w", padx=10, pady=(0, 14))
+        main_card.pack_propagate(False)
+
+        tk.Label(
+            main_card,
+            text="🧾  EMISSÃO DE NOTAS FISCAIS",
+            bg="white",
+            fg="#0b63ce",
+            font=("Segoe UI", 13, "bold"),
+        ).pack(anchor="w", padx=22, pady=(18, 8))
+
+        tk.Label(
+            main_card,
+            text="Área preparada para emissão e controle de NF-e de produtos e NFS-e de serviços.",
+            bg="white",
+            fg="#374151",
+            font=("Segoe UI", 10),
+        ).pack(anchor="w", padx=22, pady=(0, 14))
+
+        cards = tk.Frame(main_card, bg="white")
+        cards.pack(fill="x", padx=22, pady=(0, 16))
+
+        self._card_nota(
+            cards,
+            "📦  NF-e de Produtos",
+            "Venda de peças/produtos com certificado digital.",
+            "#0b63ce",
+        ).pack(side="left", fill="both", expand=True, padx=(0, 12))
+
+        self._card_nota(
+            cards,
+            "🔧  NFS-e de Serviços",
+            "Serviços emitidos pelo site da prefeitura com login e senha.",
+            "#08803a",
+        ).pack(side="left", fill="both", expand=True, padx=(12, 0))
+
+        resumo = tk.Frame(
+            main_card,
+            bg="#f8fafc",
+            highlightbackground="#e5e7eb",
+            highlightthickness=1,
+            height=170,
+        )
+        resumo.pack(fill="x", padx=22, pady=(0, 16))
+        resumo.pack_propagate(False)
+
+        tk.Label(
+            resumo,
+            text="📋  Informações pendentes da contadora",
+            bg="#f8fafc",
+            fg="#111827",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w", padx=18, pady=(14, 6))
+
+        pendencias = (
+            "• Dados fiscais obrigatórios para NF-e\n"
+            "• Regras de CFOP, NCM, CST/CSOSN e impostos\n"
+            "• Dados da empresa emitente\n"
+            "• Forma de integração com SEFAZ e prefeitura\n"
+            "• Tipo do certificado digital utilizado"
+        )
+
+        tk.Label(
+            resumo,
+            text=pendencias,
+            bg="#f8fafc",
+            fg="#374151",
+            justify="left",
+            font=("Segoe UI", 10),
+        ).pack(anchor="w", padx=18)
+
+        botoes = tk.Frame(main_card, bg="white")
+        botoes.pack(fill="x", padx=22)
+
+        tk.Button(
+            botoes,
+            text="📦  Emitir NF-e Produto",
+            bg="#0b63ce",
+            fg="white",
+            activebackground="#084ea3",
+            activeforeground="white",
+            bd=0,
+            padx=18,
+            pady=8,
+            font=("Segoe UI", 10, "bold"),
+            command=lambda: messagebox.showinfo(
+                "Em desenvolvimento",
+                "A emissão de NF-e será implementada após recebermos os dados fiscais da contadora."
+            ),
+        ).pack(side="left", padx=(0, 12))
+
+        tk.Button(
+            botoes,
+            text="🔧  Preparar NFS-e Serviço",
+            bg="#08803a",
+            fg="white",
+            activebackground="#06632d",
+            activeforeground="white",
+            bd=0,
+            padx=18,
+            pady=8,
+            font=("Segoe UI", 10, "bold"),
+            command=lambda: messagebox.showinfo(
+                "Em desenvolvimento",
+                "A preparação da NFS-e será implementada após definirmos os dados exigidos pela prefeitura."
+            ),
+        ).pack(side="left")
+
+    def _card_nota(self, parent, titulo, descricao, cor):
+        card = tk.Frame(
+            parent,
+            bg="#f8fafc",
+            highlightbackground="#e5e7eb",
+            highlightthickness=1,
+            height=105,
+        )
+        card.pack_propagate(False)
+
+        tk.Label(
+            card,
+            text=titulo,
+            bg="#f8fafc",
+            fg=cor,
+            font=("Segoe UI", 12, "bold"),
+        ).pack(anchor="w", padx=16, pady=(14, 6))
+
+        tk.Label(
+            card,
+            text=descricao,
+            bg="#f8fafc",
+            fg="#374151",
+            font=("Segoe UI", 10),
+            wraplength=360,
+            justify="left",
+        ).pack(anchor="w", padx=16)
+
+        return card
+
+    def refresh(self):
+        pass
 
 
 class OrdersFrame(tk.Frame):
