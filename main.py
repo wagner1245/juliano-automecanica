@@ -2173,6 +2173,7 @@ class OrcamentoPreview(tk.Toplevel):
         nome_cliente="",
         telefone="",
         veiculo="",
+        placa="",
         mao_de_obra="R$ 0,00",
         total_pecas="R$ 0,00",
         total_servicos="R$ 0,00",
@@ -2190,6 +2191,7 @@ class OrcamentoPreview(tk.Toplevel):
         self.telefone = telefone
         self.img_tk = None
         self.veiculo = veiculo
+        self.placa = placa
         self.mao_de_obra = mao_de_obra
         self.total_pecas = total_pecas
         self.total_servicos = total_servicos
@@ -2381,32 +2383,55 @@ class OrcamentoPreview(tk.Toplevel):
                 return None
 
             pasta_base = os.path.dirname(os.path.abspath(__file__))
-            pasta_orcamentos = os.path.join(pasta_base, "Orçamentos")
+            pasta_orcamentos = os.path.join(pasta_base, "orcamentos")
+            os.makedirs(pasta_orcamentos, exist_ok=True)
 
-            if not os.path.exists(pasta_orcamentos):
-                os.makedirs(pasta_orcamentos)
+            placa_nome = "".join(
+                ch for ch in str(getattr(self, "placa", "") or "").upper()
+                if ch.isalnum()
+            )
 
-            nome_cliente_limpo = "".join(
-                ch for ch in str(self.nome_cliente or "CLIENTE").upper()
-                if ch.isalnum() or ch in (" ", "_", "-")
-            ).strip().replace(" ", "_")
+            if placa_nome:
+                nome_arquivo = f"{placa_nome}.jpg"
+            else:
+                nome_arquivo = f"ORCAMENTO_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
 
-            veiculo_limpo = "".join(
-                ch for ch in str(self.veiculo or "VEICULO").upper()
-                if ch.isalnum() or ch in (" ", "_", "-")
-            ).strip().replace(" ", "_")
-
-            base_nome = f"{nome_cliente_limpo}_{veiculo_limpo}"
-            nome_arquivo = f"{base_nome}.jpg"
             caminho_destino = os.path.join(pasta_orcamentos, nome_arquivo)
 
-            contador = 1
-            while os.path.exists(caminho_destino):
-                nome_arquivo = f"{base_nome}_{contador}.jpg"
-                caminho_destino = os.path.join(pasta_orcamentos, nome_arquivo)
-                contador += 1
+            # Primeiro arquivo: EOU3D73.jpg
+            # Segundo: EOU3D73_02.jpg
+            # Terceiro: EOU3D73_03.jpg
+            if os.path.exists(caminho_destino) and placa_nome:
+                contador = 2
 
-            shutil.copy(self.caminho_imagem, caminho_destino)
+                while True:
+                    nome_incremental = f"{placa_nome}_{contador:02d}.jpg"
+                    caminho_incremental = os.path.join(pasta_orcamentos, nome_incremental)
+
+                    if not os.path.exists(caminho_incremental):
+                        caminho_destino = caminho_incremental
+                        break
+
+                    contador += 1
+
+            elif os.path.exists(caminho_destino):
+                contador = 2
+                nome_base, extensao = os.path.splitext(nome_arquivo)
+
+                while True:
+                    caminho_incremental = os.path.join(
+                        pasta_orcamentos,
+                        f"{nome_base}_{contador:02d}{extensao}"
+                    )
+
+                    if not os.path.exists(caminho_incremental):
+                        caminho_destino = caminho_incremental
+                        break
+
+                    contador += 1
+
+            if os.path.abspath(self.caminho_imagem) != os.path.abspath(caminho_destino):
+                shutil.copy(self.caminho_imagem, caminho_destino)
 
             self.caminho_imagem = caminho_destino
             return caminho_destino
@@ -2414,9 +2439,10 @@ class OrcamentoPreview(tk.Toplevel):
         except Exception as e:
             messagebox.showerror(
                 "Erro",
-                f"Não foi possível salvar o orçamento na pasta Orçamentos:\n{e}"
+                f"Não foi possível salvar o orçamento na pasta orçamentos:\n{e}"
             )
             return None
+
 
     def enviar_para_cliente(self):
         telefone_cliente = self.telefone or ""
@@ -3282,7 +3308,6 @@ class ServicesFrame(tk.Frame):
             return
 
         self.cliente_orcamento_id = None
-        self.busca_placa_var.set(placa)
         self.cliente_vinculado_var.set(f"{nome} - {veiculo} - {placa}")
 
     def limpar_cliente(self):
@@ -3724,7 +3749,6 @@ class ServicesFrame(tk.Frame):
             messagebox.showwarning("Atenção", "Informe a placa antes de criar o orçamento.")
             return
 
-        self.busca_placa_var.set(placa)
 
         itens = []
         for item in self.tree.get_children():
@@ -3762,6 +3786,7 @@ class ServicesFrame(tk.Frame):
             nome_cliente=nome_cliente,
             telefone=telefone,
             veiculo=veiculo,
+            placa=placa,
             mao_de_obra=mao_de_obra,
             total_pecas=self.total_pecas_var.get(),
             total_servicos=self.total_servicos_var.get(),
@@ -3879,46 +3904,12 @@ class ServicesFrame(tk.Frame):
             y += 45
             draw.text((60, y), "Obrigado pela preferência!", fill=preto, font=fonte_menor)
 
-            # Salva o orçamento em uma pasta fixa para a Ordem de Serviço localizar depois.
-            pasta_orcamentos = os.path.join(os.path.dirname(__file__), "orcamentos")
-            os.makedirs(pasta_orcamentos, exist_ok=True)
-
-            def limpar_nome_arquivo(valor):
-                texto = str(valor or "").upper()
-                texto = "".join(ch if ch.isalnum() else "_" for ch in texto)
-                partes = [parte for parte in texto.split("_") if parte]
-                return "_".join(partes)
-
-            veiculo_nome = limpar_nome_arquivo(veiculo)
-            placa_base = self.placa_orcamento_var.get().strip() or self.busca_placa_var.get().strip()
-            placa_nome = "".join(
-                ch for ch in placa_base.upper()
-                if ch.isalnum()
-            )
-
-            if placa_nome:
-                nome_arquivo = f"{placa_nome}.jpg"
-            else:
-                nome_arquivo = f"ORCAMENTO_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-
-            caminho = os.path.join(pasta_orcamentos, nome_arquivo)
-
-            # Se já existir orçamento dessa placa, cria versão incremental:
-            # EOU3D73.jpg
-            # EOU3D73_01.jpg
-            # EOU3D73_02.jpg
-            if os.path.exists(caminho):
-                contador = 1
-
-                while True:
-                    nome_incremental = f"{placa_nome}_{contador:02d}.jpg"
-                    caminho_incremental = os.path.join(pasta_orcamentos, nome_incremental)
-
-                    if not os.path.exists(caminho_incremental):
-                        caminho = caminho_incremental
-                        break
-
-                    contador += 1
+            # A pré-visualização usa apenas um arquivo temporário.
+            # O orçamento definitivo só é salvo ao clicar em Imprimir
+            # ou ao confirmar o envio para o cliente.
+            pasta_temp = tempfile.gettempdir()
+            nome_arquivo = f"preview_orcamento_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+            caminho = os.path.join(pasta_temp, nome_arquivo)
 
             img.save(caminho, "JPEG", quality=95)
             return caminho
