@@ -8,7 +8,7 @@ Descrição: Sistema de gestão de oficina mecânica desenvolvido em Python com 
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox, simpledialog
+from tkinter import ttk, messagebox, simpledialog, filedialog
 import webbrowser
 import urllib.parse
 from datetime import datetime
@@ -3873,6 +3873,7 @@ class OrdemServicoFrame(tk.Frame):
         self.busca_cliente_os_var = tk.StringVar()
         self.busca_cliente_os_var.trace_add("write", self._maiusculo_busca_placa_os)
         self.orcamento_os_var = tk.StringVar(value="Selecione um orçamento...")
+        self.orcamento_arquivo_path = None
         self.mao_obra_os_var = tk.StringVar(value="0,00")
 
         self.os_nome_var = tk.StringVar(value="-")
@@ -4021,15 +4022,88 @@ class OrdemServicoFrame(tk.Frame):
             font=("Segoe UI", 9),
         )
         self.combo_orcamentos_os.pack(side="left", fill="x", expand=True, ipady=4)
+        self.combo_orcamentos_os.bind("<Button-1>", self.abrir_pasta_orcamentos)
 
         self._botao_os(
             linha_orcamento,
             "📂 Buscar",
             "#08803a",
-            self.buscar_orcamento_os,
+            self.abrir_pasta_orcamentos,
             padx=10,
             pady=6,
         ).pack(side="left", padx=(8, 0))
+
+    def abrir_pasta_orcamentos(self, event=None):
+        placa = "".join(
+            ch for ch in self.busca_cliente_os_var.get().upper()
+            if ch.isalnum()
+        )
+
+        pasta_orcamentos = os.path.join(os.path.dirname(__file__), "orcamentos")
+
+        if not os.path.exists(pasta_orcamentos):
+            pasta_orcamentos = os.path.dirname(__file__)
+
+        # Primeiro tenta encontrar automaticamente o último orçamento JPG/JPEG da placa.
+        if placa:
+            arquivos_encontrados = []
+
+            try:
+                for nome_arquivo in os.listdir(pasta_orcamentos):
+                    nome_maiusculo = nome_arquivo.upper()
+
+                    if (
+                        placa in nome_maiusculo
+                        and nome_maiusculo.startswith("ORCAMENTO_")
+                        and nome_maiusculo.lower().endswith((".jpg", ".jpeg"))
+                    ):
+                        caminho_completo = os.path.join(pasta_orcamentos, nome_arquivo)
+                        arquivos_encontrados.append(caminho_completo)
+            except Exception:
+                arquivos_encontrados = []
+
+            if arquivos_encontrados:
+                caminho_orcamento = max(
+                    arquivos_encontrados,
+                    key=lambda caminho: os.path.getmtime(caminho)
+                )
+
+                self.orcamento_arquivo_path = caminho_orcamento
+                nome_arquivo = os.path.basename(caminho_orcamento)
+                self.orcamento_os_var.set(nome_arquivo)
+
+                messagebox.showinfo(
+                    "Orçamento encontrado",
+                    "O último orçamento desta placa foi selecionado automaticamente:\n\n"
+                    f"{nome_arquivo}"
+                )
+
+                return "break"
+
+        # Se não encontrar automaticamente, abre a pasta para escolher manualmente.
+        caminho_orcamento = filedialog.askopenfilename(
+            title="Selecionar orçamento",
+            initialdir=pasta_orcamentos,
+            filetypes=[
+                ("Imagem JPG", "*.jpg *.jpeg"),
+                ("Todos os arquivos", "*.*"),
+            ],
+        )
+
+        if not caminho_orcamento:
+            return "break"
+
+        self.orcamento_arquivo_path = caminho_orcamento
+        nome_arquivo = os.path.basename(caminho_orcamento)
+        self.orcamento_os_var.set(nome_arquivo)
+
+        messagebox.showinfo(
+            "Orçamento selecionado",
+            f"Orçamento selecionado com sucesso:\n\n{nome_arquivo}"
+        )
+
+        return "break"
+
 
     def _montar_itens_os(self):
         itens = tk.Frame(
@@ -4199,107 +4273,7 @@ class OrdemServicoFrame(tk.Frame):
         )
         self.orcamento_os_var.set("Selecione um orçamento...")
 
-        self.mostrar_cliente_localizado_os(nome_txt, veiculo_txt, placa_txt)
 
-    def mostrar_cliente_localizado_os(self, nome, veiculo, placa):
-        janela = tk.Toplevel(self)
-        janela.title("Cliente localizado")
-        janela.configure(bg="#f5f6f8")
-        janela.resizable(False, False)
-        janela.grab_set()
-
-        largura = 480
-        altura = 260
-
-        janela.update_idletasks()
-        sw = janela.winfo_screenwidth()
-        sh = janela.winfo_screenheight()
-        x = (sw // 2) - (largura // 2)
-        y = (sh // 2) - (altura // 2)
-        janela.geometry(f"{largura}x{altura}+{x}+{y}")
-
-        card = tk.Frame(
-            janela,
-            bg="white",
-            highlightbackground="#d7dce2",
-            highlightthickness=1,
-        )
-        card.pack(fill="both", expand=True, padx=18, pady=18)
-
-        topo = tk.Frame(card, bg="white")
-        topo.pack(fill="x", padx=18, pady=(18, 12))
-
-        tk.Label(
-            topo,
-            text="ℹ",
-            bg="#0b63ce",
-            fg="white",
-            font=("Segoe UI", 22, "bold"),
-            width=2,
-        ).pack(side="left", padx=(0, 14))
-
-        tk.Label(
-            topo,
-            text="Cliente vinculado à Ordem de Serviço",
-            bg="white",
-            fg="#111827",
-            font=("Segoe UI", 13, "bold"),
-        ).pack(side="left", anchor="center")
-
-        info = tk.Frame(card, bg="white")
-        info.pack(fill="x", padx=32, pady=(4, 12))
-
-        dados = [
-            ("Nome:", nome or "-"),
-            ("Veículo:", veiculo or "-"),
-            ("Placa:", placa or "-"),
-        ]
-
-        for titulo, valor in dados:
-            linha = tk.Frame(info, bg="white")
-            linha.pack(fill="x", pady=4)
-
-            tk.Label(
-                linha,
-                text=titulo,
-                bg="white",
-                fg="#111827",
-                font=("Segoe UI", 11, "bold"),
-                width=9,
-                anchor="w",
-            ).pack(side="left")
-
-            tk.Label(
-                linha,
-                text=valor,
-                bg="white",
-                fg="#111827",
-                font=("Segoe UI", 11),
-                anchor="w",
-            ).pack(side="left", fill="x", expand=True)
-
-        botoes = tk.Frame(card, bg="white")
-        botoes.pack(fill="x", padx=18, pady=(8, 18))
-
-        tk.Button(
-            botoes,
-            text="OK",
-            bg="#0b63ce",
-            fg="white",
-            activebackground="#084ea3",
-            activeforeground="white",
-            bd=0,
-            highlightthickness=0,
-            relief="flat",
-            padx=35,
-            pady=8,
-            font=("Segoe UI", 10, "bold"),
-            command=janela.destroy,
-        ).pack(side="right")
-
-        janela.bind("<Return>", lambda event: janela.destroy())
-        janela.bind("<Escape>", lambda event: janela.destroy())
-        janela.focus_force()
 
     def buscar_orcamento_os(self):
         if not self.cliente_os_id:
