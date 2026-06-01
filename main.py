@@ -4644,10 +4644,7 @@ class NotasFiscaisFrame(tk.Frame):
             padx=18,
             pady=8,
             font=("Segoe UI", 10, "bold"),
-            command=lambda: messagebox.showinfo(
-                "Em desenvolvimento",
-                "A emissão de NF-e será implementada após recebermos os dados fiscais da contadora."
-            ),
+            command=self.abrir_cadastro_nfe_produto,
         ).pack(side="left", padx=(0, 12))
 
         tk.Button(
@@ -4697,8 +4694,483 @@ class NotasFiscaisFrame(tk.Frame):
 
         return card
 
+    def abrir_cadastro_nfe_produto(self):
+        CadastroNFeProdutoDialog(self)
+
     def refresh(self):
         pass
+
+
+class CadastroNFeProdutoDialog(tk.Toplevel):
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.parent = parent
+        self.produtos = []
+
+        self.title("Cadastro de NF-e de Produto")
+        self.geometry("980x680")
+        self.minsize(900, 620)
+        self.configure(bg="#f5f6f8")
+        self.grab_set()
+
+        self._criar_variaveis()
+        self._montar_tela()
+        self._centralizar()
+
+    def _criar_variaveis(self):
+        agora = datetime.now()
+
+        self.modelo_var = tk.StringVar(value="55 - NF-e")
+        self.serie_var = tk.StringVar()
+        self.numero_var = tk.StringVar()
+        self.data_emissao_var = tk.StringVar(value=agora.strftime("%d/%m/%Y"))
+        self.hora_emissao_var = tk.StringVar(value=agora.strftime("%H:%M"))
+        self.tipo_documento_var = tk.StringVar(value="Saída")
+        self.finalidade_var = tk.StringVar(value="Normal")
+        self.consumidor_final_var = tk.StringVar(value="Sim")
+        self.destino_operacao_var = tk.StringVar(value="Operação interna")
+        self.natureza_operacao_var = tk.StringVar()
+
+        self.emitente_doc_var = tk.StringVar()
+        self.emitente_nome_var = tk.StringVar()
+        self.emitente_ie_var = tk.StringVar()
+        self.emitente_endereco_var = tk.StringVar()
+        self.emitente_cep_var = tk.StringVar()
+
+        self.destinatario_doc_var = tk.StringVar()
+        self.destinatario_nome_var = tk.StringVar()
+        self.destinatario_ie_var = tk.StringVar()
+        self.destinatario_endereco_var = tk.StringVar()
+        self.destinatario_cep_var = tk.StringVar()
+
+        self.prod_codigo_var = tk.StringVar()
+        self.prod_descricao_var = tk.StringVar()
+        self.prod_ncm_var = tk.StringVar()
+        self.prod_cfop_var = tk.StringVar()
+        self.prod_unidade_var = tk.StringVar(value="UN")
+        self.prod_quantidade_var = tk.StringVar(value="1")
+        self.prod_valor_unitario_var = tk.StringVar()
+        self.prod_situacao_tributaria_var = tk.StringVar()
+        self.prod_origem_var = tk.StringVar(value="0 - Nacional")
+
+        self.modalidade_frete_var = tk.StringVar(value="Sem frete")
+        self.pagamento_var = tk.StringVar()
+
+        for var in (
+            self.natureza_operacao_var,
+            self.emitente_nome_var,
+            self.emitente_endereco_var,
+            self.destinatario_nome_var,
+            self.destinatario_endereco_var,
+            self.prod_descricao_var,
+            self.prod_situacao_tributaria_var,
+            self.pagamento_var,
+        ):
+            var.trace_add("write", lambda *args, v=var: self._maiusculo_var(v))
+
+    def _montar_tela(self):
+        topo = tk.Frame(self, bg="#111827", height=64)
+        topo.pack(fill="x")
+        topo.pack_propagate(False)
+
+        tk.Label(
+            topo,
+            text="📦  Cadastro de NF-e de Produto",
+            bg="#111827",
+            fg="white",
+            font=("Segoe UI", 16, "bold"),
+        ).pack(side="left", padx=22)
+
+        tk.Button(
+            topo,
+            text="Fechar",
+            bg="#374151",
+            fg="white",
+            activebackground="#4b5563",
+            activeforeground="white",
+            bd=0,
+            padx=14,
+            pady=6,
+            command=self.destroy,
+        ).pack(side="right", padx=22)
+
+        area = tk.Frame(self, bg="#f5f6f8")
+        area.pack(fill="both", expand=True)
+
+        canvas = tk.Canvas(area, bg="#f5f6f8", highlightthickness=0)
+        barra = ttk.Scrollbar(area, orient="vertical", command=canvas.yview)
+        self.conteudo = tk.Frame(canvas, bg="#f5f6f8")
+
+        self.conteudo.bind(
+            "<Configure>",
+            lambda event: canvas.configure(scrollregion=canvas.bbox("all")),
+        )
+
+        janela = canvas.create_window((0, 0), window=self.conteudo, anchor="nw")
+        canvas.configure(yscrollcommand=barra.set)
+        canvas.bind("<Configure>", lambda event: canvas.itemconfig(janela, width=event.width))
+
+        canvas.pack(side="left", fill="both", expand=True)
+        barra.pack(side="right", fill="y")
+
+        self._secao_dados_nota()
+        self._secao_emitente_destinatario()
+        self._secao_produto()
+        self._secao_frete_pagamento()
+        self._secao_botoes()
+
+    def _card(self, titulo):
+        card = tk.LabelFrame(
+            self.conteudo,
+            text=titulo,
+            bg="white",
+            fg="#0b63ce",
+            font=("Segoe UI", 11, "bold"),
+            padx=16,
+            pady=14,
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+        )
+        card.pack(fill="x", padx=18, pady=(14, 0))
+        return card
+
+    def _campo(self, parent, label, var, row, col, width=28, combo=None):
+        box = tk.Frame(parent, bg="white")
+        box.grid(row=row, column=col, sticky="w", padx=(0, 18), pady=(0, 12))
+
+        tk.Label(
+            box,
+            text=label,
+            bg="white",
+            fg="#111827",
+            font=("Segoe UI", 9, "bold"),
+        ).pack(anchor="w")
+
+        if combo:
+            entrada = ttk.Combobox(
+                box,
+                textvariable=var,
+                values=combo,
+                width=width,
+                state="readonly",
+                font=("Segoe UI", 10),
+            )
+        else:
+            entrada = tk.Entry(
+                box,
+                textvariable=var,
+                width=width,
+                font=("Segoe UI", 10),
+                relief="solid",
+                bd=1,
+            )
+
+        entrada.pack(fill="x", pady=(4, 0), ipady=4)
+        return entrada
+
+    def _secao_dados_nota(self):
+        card = self._card("1. Dados da nota fiscal")
+
+        self._campo(card, "Modelo:", self.modelo_var, 0, 0, combo=["55 - NF-e", "65 - NFC-e"])
+        self._campo(card, "Série:", self.serie_var, 0, 1)
+        self._campo(card, "Número:", self.numero_var, 0, 2)
+        self._campo(card, "Data de emissão:", self.data_emissao_var, 1, 0)
+        self._campo(card, "Hora de emissão:", self.hora_emissao_var, 1, 1)
+        self._campo(card, "Tipo de documento:", self.tipo_documento_var, 1, 2, combo=["Entrada", "Saída"])
+        self._campo(card, "Finalidade:", self.finalidade_var, 2, 0, combo=["Normal", "Complementar", "Ajuste", "Devolução"])
+        self._campo(card, "Consumidor final:", self.consumidor_final_var, 2, 1, combo=["Sim", "Não"])
+        self._campo(card, "Destino da operação:", self.destino_operacao_var, 2, 2, combo=["Operação interna", "Interestadual", "Exterior"])
+        self._campo(card, "Natureza da operação:", self.natureza_operacao_var, 3, 0, width=82)
+
+    def _secao_emitente_destinatario(self):
+        bloco = tk.Frame(self.conteudo, bg="#f5f6f8")
+        bloco.pack(fill="x", padx=18, pady=(14, 0))
+
+        emitente = tk.LabelFrame(
+            bloco,
+            text="2. Dados do emitente",
+            bg="white",
+            fg="#0b63ce",
+            font=("Segoe UI", 11, "bold"),
+            padx=16,
+            pady=14,
+        )
+        emitente.pack(side="left", fill="both", expand=True, padx=(0, 8))
+
+        destinatario = tk.LabelFrame(
+            bloco,
+            text="3. Dados do destinatário",
+            bg="white",
+            fg="#0b63ce",
+            font=("Segoe UI", 11, "bold"),
+            padx=16,
+            pady=14,
+        )
+        destinatario.pack(side="left", fill="both", expand=True, padx=(8, 0))
+
+        self._campo(emitente, "CNPJ/CPF:", self.emitente_doc_var, 0, 0, width=34)
+        self._campo(emitente, "Nome/Razão social:", self.emitente_nome_var, 1, 0, width=34)
+        self._campo(emitente, "Inscrição estadual:", self.emitente_ie_var, 2, 0, width=34)
+        self._campo(emitente, "Endereço com número:", self.emitente_endereco_var, 3, 0, width=34)
+        self._campo(emitente, "CEP:", self.emitente_cep_var, 4, 0, width=34)
+
+        self._campo(destinatario, "CNPJ/CPF:", self.destinatario_doc_var, 0, 0, width=34)
+        self._campo(destinatario, "Nome/Razão social:", self.destinatario_nome_var, 1, 0, width=34)
+        self._campo(destinatario, "Inscrição estadual:", self.destinatario_ie_var, 2, 0, width=34)
+        self._campo(destinatario, "Endereço com número:", self.destinatario_endereco_var, 3, 0, width=34)
+        self._campo(destinatario, "CEP:", self.destinatario_cep_var, 4, 0, width=34)
+
+    def _secao_produto(self):
+        card = self._card("4. Dados do produto")
+
+        self._campo(card, "Código:", self.prod_codigo_var, 0, 0)
+        self._campo(card, "Descrição:", self.prod_descricao_var, 0, 1, width=38)
+        self._campo(card, "NCM:", self.prod_ncm_var, 0, 2)
+        self._campo(card, "CFOP:", self.prod_cfop_var, 1, 0)
+        self._campo(card, "Unidade comercial:", self.prod_unidade_var, 1, 1, combo=["UN", "PC", "KG", "LT", "CX", "M"])
+        self._campo(card, "Quantidade:", self.prod_quantidade_var, 1, 2)
+        self._campo(card, "Valor unitário:", self.prod_valor_unitario_var, 2, 0)
+        self._campo(card, "Situação tributária:", self.prod_situacao_tributaria_var, 2, 1, width=38)
+        self._campo(card, "Origem:", self.prod_origem_var, 2, 2, combo=["0 - Nacional", "1 - Estrangeira importação direta", "2 - Estrangeira mercado interno"])
+
+        tk.Button(
+            card,
+            text="➕  Adicionar produto na nota",
+            bg="#08803a",
+            fg="white",
+            activebackground="#06632d",
+            activeforeground="white",
+            bd=0,
+            padx=14,
+            pady=6,
+            font=("Segoe UI", 9, "bold"),
+            command=self.adicionar_produto,
+        ).grid(row=3, column=0, sticky="w", pady=(0, 10))
+
+        cols = ("codigo", "descricao", "ncm", "cfop", "un", "qtd", "valor", "total")
+        self.produtos_tree = ttk.Treeview(card, columns=cols, show="headings", height=5)
+
+        colunas = [
+            ("codigo", "Código", 90),
+            ("descricao", "Descrição", 220),
+            ("ncm", "NCM", 90),
+            ("cfop", "CFOP", 80),
+            ("un", "UN", 60),
+            ("qtd", "Qtd", 70),
+            ("valor", "Valor unit.", 100),
+            ("total", "Total", 110),
+        ]
+
+        for col, titulo, largura in colunas:
+            self.produtos_tree.heading(col, text=titulo)
+            self.produtos_tree.column(col, width=largura, anchor="w")
+
+        self.produtos_tree.grid(row=4, column=0, columnspan=3, sticky="ew", pady=(0, 6))
+
+        tk.Button(
+            card,
+            text="🗑  Remover produto selecionado",
+            bg="#dc2626",
+            fg="white",
+            activebackground="#991b1b",
+            activeforeground="white",
+            bd=0,
+            padx=14,
+            pady=6,
+            font=("Segoe UI", 9, "bold"),
+            command=self.remover_produto,
+        ).grid(row=5, column=0, sticky="w")
+
+    def _secao_frete_pagamento(self):
+        card = self._card("5. Frete, pagamento e informações complementares")
+
+        self._campo(card, "Modalidade do frete:", self.modalidade_frete_var, 0, 0, combo=["Sem frete", "Por conta do emitente", "Por conta do destinatário", "Terceiros"])
+        self._campo(card, "Informações de pagamento:", self.pagamento_var, 0, 1, width=56)
+
+        tk.Label(
+            card,
+            text="Informações complementares:",
+            bg="white",
+            fg="#111827",
+            font=("Segoe UI", 9, "bold"),
+        ).grid(row=1, column=0, columnspan=3, sticky="w")
+
+        self.complementares_txt = tk.Text(
+            card,
+            width=100,
+            height=5,
+            font=("Segoe UI", 10),
+            relief="solid",
+            bd=1,
+        )
+        self.complementares_txt.grid(row=2, column=0, columnspan=3, sticky="ew", pady=(4, 0))
+
+    def _secao_botoes(self):
+        botoes = tk.Frame(self.conteudo, bg="#f5f6f8")
+        botoes.pack(fill="x", padx=18, pady=18)
+
+        tk.Button(
+            botoes,
+            text="💾  Salvar cadastro da nota",
+            bg="#0b63ce",
+            fg="white",
+            activebackground="#084ea3",
+            activeforeground="white",
+            bd=0,
+            padx=18,
+            pady=8,
+            font=("Segoe UI", 10, "bold"),
+            command=self.salvar_cadastro,
+        ).pack(side="left", padx=(0, 12))
+
+        tk.Button(
+            botoes,
+            text="🧹  Limpar tela",
+            bg="#6b7280",
+            fg="white",
+            activebackground="#4b5563",
+            activeforeground="white",
+            bd=0,
+            padx=18,
+            pady=8,
+            font=("Segoe UI", 10, "bold"),
+            command=self.limpar_tela,
+        ).pack(side="left")
+
+    def _maiusculo_var(self, var):
+        texto = var.get()
+        texto_maiusculo = texto.upper()
+        if texto != texto_maiusculo:
+            var.set(texto_maiusculo)
+
+    def _converter_valor(self, valor):
+        texto = str(valor or "").strip().replace("R$", "").replace(".", "").replace(",", ".")
+        try:
+            return float(texto)
+        except ValueError:
+            return None
+
+    def _formatar_moeda(self, valor):
+        return f"R$ {valor:.2f}".replace(".", ",")
+
+    def adicionar_produto(self):
+        codigo = self.prod_codigo_var.get().strip().upper()
+        descricao = self.prod_descricao_var.get().strip().upper()
+        ncm = self.prod_ncm_var.get().strip()
+        cfop = self.prod_cfop_var.get().strip()
+        unidade = self.prod_unidade_var.get().strip().upper()
+        quantidade = self._converter_valor(self.prod_quantidade_var.get())
+        valor_unitario = self._converter_valor(self.prod_valor_unitario_var.get())
+
+        if not codigo or not descricao:
+            messagebox.showwarning("Atenção", "Informe pelo menos o código e a descrição do produto.")
+            return
+
+        if quantidade is None or quantidade <= 0:
+            messagebox.showwarning("Atenção", "Informe uma quantidade válida.")
+            return
+
+        if valor_unitario is None or valor_unitario < 0:
+            messagebox.showwarning("Atenção", "Informe um valor unitário válido.")
+            return
+
+        total = quantidade * valor_unitario
+        produto = {
+            "codigo": codigo,
+            "descricao": descricao,
+            "ncm": ncm,
+            "cfop": cfop,
+            "unidade": unidade,
+            "quantidade": quantidade,
+            "valor_unitario": valor_unitario,
+            "situacao_tributaria": self.prod_situacao_tributaria_var.get().strip().upper(),
+            "origem": self.prod_origem_var.get().strip(),
+            "total": total,
+        }
+        self.produtos.append(produto)
+
+        self.produtos_tree.insert(
+            "",
+            "end",
+            values=(
+                codigo,
+                descricao,
+                ncm,
+                cfop,
+                unidade,
+                str(quantidade).replace(".", ","),
+                self._formatar_moeda(valor_unitario),
+                self._formatar_moeda(total),
+            ),
+        )
+
+        self.prod_codigo_var.set("")
+        self.prod_descricao_var.set("")
+        self.prod_ncm_var.set("")
+        self.prod_cfop_var.set("")
+        self.prod_quantidade_var.set("1")
+        self.prod_valor_unitario_var.set("")
+        self.prod_situacao_tributaria_var.set("")
+
+    def remover_produto(self):
+        selecionado = self.produtos_tree.selection()
+        if not selecionado:
+            messagebox.showwarning("Atenção", "Selecione um produto para remover.")
+            return
+
+        item = selecionado[0]
+        indice = self.produtos_tree.index(item)
+        self.produtos_tree.delete(item)
+
+        if 0 <= indice < len(self.produtos):
+            self.produtos.pop(indice)
+
+    def salvar_cadastro(self):
+        obrigatorios = [
+            ("Natureza da operação", self.natureza_operacao_var.get()),
+            ("CNPJ/CPF do emitente", self.emitente_doc_var.get()),
+            ("Nome do emitente", self.emitente_nome_var.get()),
+            ("CNPJ/CPF do destinatário", self.destinatario_doc_var.get()),
+            ("Nome do destinatário", self.destinatario_nome_var.get()),
+        ]
+
+        for nome, valor in obrigatorios:
+            if not str(valor).strip():
+                messagebox.showwarning("Atenção", f"Preencha o campo: {nome}.")
+                return
+
+        if not self.produtos:
+            messagebox.showwarning("Atenção", "Adicione pelo menos um produto na nota.")
+            return
+
+        total = sum(produto["total"] for produto in self.produtos)
+
+        messagebox.showinfo(
+            "Cadastro salvo",
+            "Cadastro da NF-e de produto preenchido com sucesso.\n\n"
+            f"Produtos adicionados: {len(self.produtos)}\n"
+            f"Total da nota: {self._formatar_moeda(total)}\n\n"
+            "Nesta primeira etapa os dados ficam apenas na tela.\n"
+            "Na próxima etapa vamos criar as tabelas no banco e salvar esse cadastro definitivamente."
+        )
+
+    def limpar_tela(self):
+        confirmar = messagebox.askyesno("Confirmar", "Deseja limpar todos os campos da nota?")
+        if not confirmar:
+            return
+
+        self.destroy()
+        CadastroNFeProdutoDialog(self.parent)
+
+    def _centralizar(self):
+        self.update_idletasks()
+        largura = self.winfo_width()
+        altura = self.winfo_height()
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        x = (sw // 2) - (largura // 2)
+        y = (sh // 2) - (altura // 2)
+        self.geometry(f"{largura}x{altura}+{x}+{y}")
 
 
 class OrdersFrame(tk.Frame):
