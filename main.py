@@ -983,7 +983,9 @@ class ClientsFrame(tk.Frame):
         if self.telefone_var.get() != texto:
             self.telefone_var.set(texto)
 
+
     def _maiusculo_var(self, var):
+
         texto = var.get()
         texto_maiusculo = texto.upper()
         if texto != texto_maiusculo:
@@ -2619,6 +2621,8 @@ class ServicesFrame(tk.Frame):
         # =========================
         self.nome_orcamento_var = tk.StringVar()
         self.veiculo_orcamento_var = tk.StringVar()
+        self.placa_orcamento_var = tk.StringVar()
+        self._formatando_placa_orcamento = False
         self.cliente_vinculado_var = tk.StringVar(value="nenhum")
         self.busca_placa_var = tk.StringVar()
         self.cliente_orcamento_id = None
@@ -2633,6 +2637,9 @@ class ServicesFrame(tk.Frame):
         )
         self.veiculo_orcamento_var.trace_add(
             "write", lambda *args: self._maiusculo_var(self.veiculo_orcamento_var)
+        )
+        self.placa_orcamento_var.trace_add(
+            "write", self._formatar_placa_visual
         )
         self.busca_placa_var.trace_add(
             "write", lambda *args: self._maiusculo_var(self.busca_placa_var)
@@ -2695,7 +2702,7 @@ class ServicesFrame(tk.Frame):
             bg="white",
             highlightbackground="#d7dce2",
             highlightthickness=1,
-            height=118,
+            height=155,
         )
         cliente_card.pack(fill="x", pady=(0, 8))
         cliente_card.pack_propagate(False)
@@ -2709,7 +2716,7 @@ class ServicesFrame(tk.Frame):
         ).pack(anchor="w", padx=16, pady=(7, 4))
 
         cliente_body = tk.Frame(cliente_card, bg="white")
-        cliente_body.pack(fill="both", expand=True, padx=16, pady=(0, 6))
+        cliente_body.pack(fill="both", expand=True, padx=16, pady=(0, 8))
 
         form_cliente = tk.Frame(cliente_body, bg="white")
         form_cliente.pack(side="left", anchor="n")
@@ -2747,6 +2754,24 @@ class ServicesFrame(tk.Frame):
             relief="solid",
             bd=1,
         ).grid(row=1, column=1, padx=(10, 0), pady=(8, 0), ipady=3)
+
+        tk.Label(
+            form_cliente,
+            text="Placa:",
+            bg="white",
+            fg="#111827",
+            font=("Segoe UI", 10, "bold"),
+        ).grid(row=2, column=0, sticky="w", pady=(8, 0))
+
+        self.placa_orcamento_entry = tk.Entry(
+            form_cliente,
+            textvariable=self.placa_orcamento_var,
+            width=34,
+            font=("Segoe UI", 10),
+            relief="solid",
+            bd=1,
+        )
+        self.placa_orcamento_entry.grid(row=2, column=1, padx=(10, 0), pady=(8, 0), ipady=3)
 
         botoes_cliente = tk.Frame(cliente_body, bg="white")
         botoes_cliente.pack(side="left", padx=(22, 0), anchor="n")
@@ -2786,7 +2811,7 @@ class ServicesFrame(tk.Frame):
             highlightbackground="#e5e7eb",
             highlightthickness=1,
             width=255,
-            height=68,
+            height=92,
         )
         cliente_info.pack(side="left", padx=(22, 0), anchor="n")
         cliente_info.pack_propagate(False)
@@ -3148,6 +3173,7 @@ class ServicesFrame(tk.Frame):
         self.nome_orcamento_var.set(str(nome or "").strip().upper())
         self.veiculo_orcamento_var.set(str(veiculo or "").strip().upper())
         self.busca_placa_var.set(str(placa or "").strip().upper())
+        self.placa_orcamento_var.set(str(placa or "").strip().upper())
         self.cliente_vinculado_var.set(f"{nome or ''} - {veiculo or ''}".strip().upper())
 
         self.esconder_sugestoes_placa()
@@ -3182,6 +3208,7 @@ class ServicesFrame(tk.Frame):
                 self.cliente_orcamento_id = None
                 self.nome_orcamento_var.set("")
                 self.veiculo_orcamento_var.set("")
+                self.placa_orcamento_var.set("")
                 self.cliente_vinculado_var.set("nenhum")
                 messagebox.showwarning("Atenção", "Cliente não encontrado para esta placa.")
                 return
@@ -3192,10 +3219,44 @@ class ServicesFrame(tk.Frame):
             self.nome_orcamento_var.set(str(nome or "").strip().upper())
             self.veiculo_orcamento_var.set(str(veiculo or "").strip().upper())
             self.busca_placa_var.set(str(placa_banco or placa_digitada).strip().upper())
+            self.placa_orcamento_var.set(str(placa_banco or placa_digitada).strip().upper())
             self.cliente_vinculado_var.set(f"{nome or ''} - {veiculo or ''}".strip().upper())
 
         except Exception as e:
             messagebox.showerror("Erro", f"Não foi possível buscar o cliente pela placa:\n{e}")
+
+    def _formatar_placa_visual(self, *args):
+        if getattr(self, "_formatando_placa_orcamento", False):
+            return
+
+        self._formatando_placa_orcamento = True
+
+        try:
+            texto_atual = self.placa_orcamento_var.get()
+
+            # Mantém apenas letras e números, tudo em maiúsculo, limitado a 7 caracteres.
+            texto_limpo = "".join(
+                ch for ch in texto_atual.upper()
+                if ch.isalnum()
+            )[:7]
+
+            if len(texto_limpo) > 3:
+                texto_formatado = f"{texto_limpo[:3]}-{texto_limpo[3:]}"
+            else:
+                texto_formatado = texto_limpo
+
+            if texto_atual != texto_formatado:
+                self.placa_orcamento_var.set(texto_formatado)
+
+                if hasattr(self, "placa_orcamento_entry"):
+                    self.placa_orcamento_entry.after(
+                        1,
+                        lambda: self.placa_orcamento_entry.icursor(tk.END)
+                    )
+
+        finally:
+            self._formatando_placa_orcamento = False
+
 
     def _maiusculo_var(self, var):
         texto = var.get()
@@ -3206,6 +3267,7 @@ class ServicesFrame(tk.Frame):
     def vincular_cliente_visual(self):
         nome = self.nome_orcamento_var.get().strip()
         veiculo = self.veiculo_orcamento_var.get().strip()
+        placa = self.placa_orcamento_var.get().strip().upper()
 
         if not nome:
             messagebox.showwarning("Atenção", "Informe o nome do cliente.")
@@ -3215,12 +3277,18 @@ class ServicesFrame(tk.Frame):
             messagebox.showwarning("Atenção", "Informe o veículo do cliente.")
             return
 
+        if not placa:
+            messagebox.showwarning("Atenção", "Informe a placa do veículo.")
+            return
+
         self.cliente_orcamento_id = None
-        self.cliente_vinculado_var.set(f"{nome} - {veiculo}")
+        self.busca_placa_var.set(placa)
+        self.cliente_vinculado_var.set(f"{nome} - {veiculo} - {placa}")
 
     def limpar_cliente(self):
         self.nome_orcamento_var.set("")
         self.veiculo_orcamento_var.set("")
+        self.placa_orcamento_var.set("")
         self.cliente_vinculado_var.set("nenhum")
         self.cliente_orcamento_id = None
         self.busca_placa_var.set("")
@@ -3642,6 +3710,7 @@ class ServicesFrame(tk.Frame):
     def criar_orcamento_visual(self):
         nome_cliente = self.nome_orcamento_var.get().strip()
         veiculo = self.veiculo_orcamento_var.get().strip()
+        placa = self.placa_orcamento_var.get().strip().upper()
 
         if not nome_cliente:
             messagebox.showwarning("Atenção", "Informe ou vincule um cliente antes de criar o orçamento.")
@@ -3650,6 +3719,12 @@ class ServicesFrame(tk.Frame):
         if not veiculo:
             messagebox.showwarning("Atenção", "Informe o veículo antes de criar o orçamento.")
             return
+
+        if not placa:
+            messagebox.showwarning("Atenção", "Informe a placa antes de criar o orçamento.")
+            return
+
+        self.busca_placa_var.set(placa)
 
         itens = []
         for item in self.tree.get_children():
@@ -3752,6 +3827,15 @@ class ServicesFrame(tk.Frame):
             y += 48
             draw.text((60, y), f"Veículo: {veiculo}", fill=preto, font=fonte_normal)
 
+            placa_visual = ""
+            if hasattr(self, "placa_orcamento_var"):
+                placa_visual = self.placa_orcamento_var.get().strip().upper()
+            elif hasattr(self, "busca_placa_var"):
+                placa_visual = self.busca_placa_var.get().strip().upper()
+
+            y += 48
+            draw.text((60, y), f"Placa: {placa_visual}", fill=preto, font=fonte_normal)
+
             y += 62
             draw.line((60, y, largura - 60, y), fill=preto, width=3)
 
@@ -3795,9 +3879,46 @@ class ServicesFrame(tk.Frame):
             y += 45
             draw.text((60, y), "Obrigado pela preferência!", fill=preto, font=fonte_menor)
 
-            pasta_temp = tempfile.gettempdir()
-            nome_arquivo = f"orcamento_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-            caminho = os.path.join(pasta_temp, nome_arquivo)
+            # Salva o orçamento em uma pasta fixa para a Ordem de Serviço localizar depois.
+            pasta_orcamentos = os.path.join(os.path.dirname(__file__), "orcamentos")
+            os.makedirs(pasta_orcamentos, exist_ok=True)
+
+            def limpar_nome_arquivo(valor):
+                texto = str(valor or "").upper()
+                texto = "".join(ch if ch.isalnum() else "_" for ch in texto)
+                partes = [parte for parte in texto.split("_") if parte]
+                return "_".join(partes)
+
+            veiculo_nome = limpar_nome_arquivo(veiculo)
+            placa_base = self.placa_orcamento_var.get().strip() or self.busca_placa_var.get().strip()
+            placa_nome = "".join(
+                ch for ch in placa_base.upper()
+                if ch.isalnum()
+            )
+
+            if placa_nome:
+                nome_arquivo = f"{placa_nome}.jpg"
+            else:
+                nome_arquivo = f"ORCAMENTO_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+
+            caminho = os.path.join(pasta_orcamentos, nome_arquivo)
+
+            # Se já existir orçamento dessa placa, cria versão incremental:
+            # EOU3D73.jpg
+            # EOU3D73_01.jpg
+            # EOU3D73_02.jpg
+            if os.path.exists(caminho):
+                contador = 1
+
+                while True:
+                    nome_incremental = f"{placa_nome}_{contador:02d}.jpg"
+                    caminho_incremental = os.path.join(pasta_orcamentos, nome_incremental)
+
+                    if not os.path.exists(caminho_incremental):
+                        caminho = caminho_incremental
+                        break
+
+                    contador += 1
 
             img.save(caminho, "JPEG", quality=95)
             return caminho
