@@ -283,6 +283,14 @@ class App(tk.Tk):
         except Exception:
             self.total_clientes_var.set("0")
 
+
+    def _maiusculo_placa(self, *args):
+        texto = self.placa_var.get()
+        texto_maiusculo = texto.upper()
+
+        if texto != texto_maiusculo:
+            self.placa_var.set(texto_maiusculo)
+
 class DashboardFrame(tk.Frame):
     def __init__(self, parent, app):
         super().__init__(parent, bg="#f5f6f8")
@@ -1833,6 +1841,7 @@ class AddClientDialog(tk.Toplevel):
         self.cidade_var = tk.StringVar()
         self.endereco_var = tk.StringVar()
         self.placa_var = tk.StringVar()
+        self.placa_var.trace_add("write", self._maiusculo_placa)
         self.veiculo_var = tk.StringVar()
         self.telefone_var = tk.StringVar()
         self.cor_var = tk.StringVar()
@@ -3862,6 +3871,7 @@ class OrdemServicoFrame(tk.Frame):
         self.cliente_os_id = None
 
         self.busca_cliente_os_var = tk.StringVar()
+        self.busca_cliente_os_var.trace_add("write", self._maiusculo_busca_placa_os)
         self.orcamento_os_var = tk.StringVar(value="Selecione um orçamento...")
         self.mao_obra_os_var = tk.StringVar(value="0,00")
 
@@ -3877,6 +3887,14 @@ class OrdemServicoFrame(tk.Frame):
         self.os_total_geral_var = tk.StringVar(value="R$ 0,00")
 
         self._montar_ordem_servico()
+
+    def _maiusculo_busca_placa_os(self, *args):
+        texto = self.busca_cliente_os_var.get()
+        texto_maiusculo = texto.upper()
+
+        if texto != texto_maiusculo:
+            self.busca_cliente_os_var.set(texto_maiusculo)
+
 
     def _botao_os(self, parent, texto, cor, comando, padx=12, pady=5, largura=None):
         return tk.Button(
