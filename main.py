@@ -4146,72 +4146,85 @@ class OrdemServicoFrame(tk.Frame):
         ).pack(side="left", padx=(8, 0))
 
     def abrir_pasta_orcamentos(self, event=None):
-        placa = "".join(
-            ch for ch in self.busca_cliente_os_var.get().upper()
-            if ch.isalnum()
-        )
+        texto_cliente = self.busca_cliente_os_var.get().strip().upper()
+
+        # Extrai a placa do texto exibido na OS.
+        # Exemplos:
+        # "HYUNDAI - HB20 - EOU - 3D73"
+        # "HYUNDAI - HB20 - EOU-3D73"
+        partes = texto_cliente.split("-")
+
+        if len(partes) >= 2:
+            placa_base = "".join(partes[-2:]).strip()
+        else:
+            placa_base = texto_cliente
+
+        placa = "".join(ch for ch in placa_base.upper() if ch.isalnum())
+
+        if not placa:
+            messagebox.showwarning(
+                "Atenção",
+                "Busque um cliente/veículo antes de buscar o orçamento."
+            )
+            return "break"
 
         pasta_orcamentos = os.path.join(os.path.dirname(__file__), "orcamentos")
 
         if not os.path.exists(pasta_orcamentos):
-            pasta_orcamentos = os.path.dirname(__file__)
-
-        # Primeiro tenta encontrar automaticamente o último orçamento JPG/JPEG da placa.
-        if placa:
-            arquivos_encontrados = []
-
-            try:
-                for nome_arquivo in os.listdir(pasta_orcamentos):
-                    nome_maiusculo = nome_arquivo.upper()
-
-                    if (
-                        placa in nome_maiusculo
-                        and nome_maiusculo.startswith("ORCAMENTO_")
-                        and nome_maiusculo.lower().endswith((".jpg", ".jpeg"))
-                    ):
-                        caminho_completo = os.path.join(pasta_orcamentos, nome_arquivo)
-                        arquivos_encontrados.append(caminho_completo)
-            except Exception:
-                arquivos_encontrados = []
-
-            if arquivos_encontrados:
-                caminho_orcamento = max(
-                    arquivos_encontrados,
-                    key=lambda caminho: os.path.getmtime(caminho)
-                )
-
-                self.orcamento_arquivo_path = caminho_orcamento
-                nome_arquivo = os.path.basename(caminho_orcamento)
-                self.orcamento_os_var.set(nome_arquivo)
-
-                messagebox.showinfo(
-                    "Orçamento encontrado",
-                    "O último orçamento desta placa foi selecionado automaticamente:\n\n"
-                    f"{nome_arquivo}"
-                )
-
-                return "break"
-
-        # Se não encontrar automaticamente, abre a pasta para escolher manualmente.
-        caminho_orcamento = filedialog.askopenfilename(
-            title="Selecionar orçamento",
-            initialdir=pasta_orcamentos,
-            filetypes=[
-                ("Imagem JPG", "*.jpg *.jpeg"),
-                ("Todos os arquivos", "*.*"),
-            ],
-        )
-
-        if not caminho_orcamento:
+            messagebox.showwarning(
+                "Atenção",
+                "A pasta de orçamentos ainda não existe."
+            )
             return "break"
+
+        arquivos_encontrados = []
+
+        try:
+            for nome_arquivo in os.listdir(pasta_orcamentos):
+                nome_maiusculo = nome_arquivo.upper()
+
+                if not nome_maiusculo.lower().endswith((".jpg", ".jpeg")):
+                    continue
+
+                nome_sem_extensao = os.path.splitext(nome_maiusculo)[0]
+                nome_limpo = "".join(ch for ch in nome_sem_extensao if ch.isalnum())
+
+                # Aceita:
+                # EOU3D73.jpg
+                # EOU3D73_02.jpg
+                # EOU3D73_03.jpg
+                if nome_limpo.startswith(placa):
+                    caminho_completo = os.path.join(pasta_orcamentos, nome_arquivo)
+                    arquivos_encontrados.append(caminho_completo)
+
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Não foi possível buscar orçamento na pasta:\n{e}"
+            )
+            return "break"
+
+        if not arquivos_encontrados:
+            messagebox.showwarning(
+                "Atenção",
+                "Nenhum orçamento encontrado para esta placa."
+            )
+            return "break"
+
+        # Sempre pega o arquivo mais recente pela data de modificação.
+        caminho_orcamento = max(
+            arquivos_encontrados,
+            key=lambda caminho: os.path.getmtime(caminho)
+        )
 
         self.orcamento_arquivo_path = caminho_orcamento
         nome_arquivo = os.path.basename(caminho_orcamento)
         self.orcamento_os_var.set(nome_arquivo)
 
         messagebox.showinfo(
-            "Orçamento selecionado",
-            f"Orçamento selecionado com sucesso:\n\n{nome_arquivo}"
+            "Orçamento encontrado",
+            "O último orçamento desta placa foi selecionado automaticamente:\n\n"
+            f"{nome_arquivo}"
         )
 
         return "break"
@@ -4380,6 +4393,10 @@ class OrdemServicoFrame(tk.Frame):
             self.busca_cliente_os_var.set(veiculo_txt)
         else:
             self.busca_cliente_os_var.set(nome_txt)
+
+        if hasattr(self, "busca_cliente_os_entry"):
+            self.busca_cliente_os_entry.focus_set()
+            self.busca_cliente_os_entry.icursor(tk.END)
 
         self.combo_orcamentos_os.configure(
             values=[
