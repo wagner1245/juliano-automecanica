@@ -4260,8 +4260,12 @@ class OrdemServicoFrame(tk.Frame):
         placa_txt = str(placa or "").strip().upper()
         veiculo_txt = str(veiculo or "").strip().upper()
 
-        if placa_txt:
-            self.busca_cliente_os_var.set(f"{nome_txt} - {placa_txt}")
+        if placa_txt and veiculo_txt:
+            self.busca_cliente_os_var.set(f"{veiculo_txt} - {placa_txt}")
+        elif placa_txt:
+            self.busca_cliente_os_var.set(placa_txt)
+        elif veiculo_txt:
+            self.busca_cliente_os_var.set(veiculo_txt)
         else:
             self.busca_cliente_os_var.set(nome_txt)
 
