@@ -15,6 +15,7 @@ from datetime import datetime
 import os
 import tempfile
 import shutil
+import json
 
 from config import APP_TITLE, LOGO_PATH
 from database import db, init_db
@@ -2177,6 +2178,7 @@ class OrcamentoPreview(tk.Toplevel):
         mao_de_obra="R$ 0,00",
         total_pecas="R$ 0,00",
         total_servicos="R$ 0,00",
+        itens=None,
     ):
         super().__init__(parent)
 
@@ -2195,6 +2197,7 @@ class OrcamentoPreview(tk.Toplevel):
         self.mao_de_obra = mao_de_obra
         self.total_pecas = total_pecas
         self.total_servicos = total_servicos
+        self.itens = itens or []
 
         self.update_idletasks()
         largura = 900
@@ -2434,12 +2437,55 @@ class OrcamentoPreview(tk.Toplevel):
                 shutil.copy(self.caminho_imagem, caminho_destino)
 
             self.caminho_imagem = caminho_destino
+            self.salvar_dados_orcamento_json(caminho_destino)
             return caminho_destino
 
         except Exception as e:
             messagebox.showerror(
                 "Erro",
                 f"Não foi possível salvar o orçamento na pasta orçamentos:\n{e}"
+            )
+            return None
+
+
+    def salvar_dados_orcamento_json(self, caminho_imagem_salvo):
+        try:
+            pasta_base = os.path.dirname(os.path.abspath(__file__))
+            pasta_dados = os.path.join(pasta_base, "dados_orcamentos")
+            os.makedirs(pasta_dados, exist_ok=True)
+
+            nome_base = os.path.splitext(os.path.basename(caminho_imagem_salvo))[0]
+            caminho_json = os.path.join(pasta_dados, f"{nome_base}.json")
+
+            dados_orcamento = {
+                "cliente": self.nome_cliente,
+                "telefone": self.telefone,
+                "veiculo": self.veiculo,
+                "placa": self.placa,
+                "mao_de_obra": self.mao_de_obra,
+                "total_pecas": self.total_pecas,
+                "total_servicos": self.total_servicos,
+                "caminho_imagem": caminho_imagem_salvo,
+                "data_criacao": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
+                "itens": [
+                    {
+                        "quantidade": str(item[0]),
+                        "descricao": str(item[1]).upper(),
+                        "valor_unitario": str(item[2]).replace("R$", "").strip(),
+                    }
+                    for item in self.itens
+                ],
+            }
+
+            with open(caminho_json, "w", encoding="utf-8") as arquivo:
+                json.dump(dados_orcamento, arquivo, ensure_ascii=False, indent=4)
+
+            return caminho_json
+
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Não foi possível salvar os dados do orçamento:\\n{e}"
             )
             return None
 
@@ -3308,6 +3354,7 @@ class ServicesFrame(tk.Frame):
             return
 
         self.cliente_orcamento_id = None
+        self.busca_placa_var.set(placa)
         self.cliente_vinculado_var.set(f"{nome} - {veiculo} - {placa}")
 
     def limpar_cliente(self):
@@ -3749,6 +3796,7 @@ class ServicesFrame(tk.Frame):
             messagebox.showwarning("Atenção", "Informe a placa antes de criar o orçamento.")
             return
 
+        self.busca_placa_var.set(placa)
 
         itens = []
         for item in self.tree.get_children():
@@ -3790,6 +3838,7 @@ class ServicesFrame(tk.Frame):
             mao_de_obra=mao_de_obra,
             total_pecas=self.total_pecas_var.get(),
             total_servicos=self.total_servicos_var.get(),
+            itens=itens,
         )
 
     def gerar_imagem_orcamento(self, nome_cliente, veiculo, itens):
@@ -4137,18 +4186,10 @@ class OrdemServicoFrame(tk.Frame):
         self.combo_orcamentos_os.bind("<Button-1>", self.abrir_pasta_orcamentos)
 
     def abrir_pasta_orcamentos(self, event=None):
-        texto_cliente = self.busca_cliente_os_var.get().strip().upper()
+        placa_base = self.os_placa_var.get().strip()
 
-        # Extrai a placa do texto exibido na OS.
-        # Exemplos:
-        # "HYUNDAI - HB20 - EOU - 3D73"
-        # "HYUNDAI - HB20 - EOU-3D73"
-        partes = texto_cliente.split("-")
-
-        if len(partes) >= 2:
-            placa_base = "".join(partes[-2:]).strip()
-        else:
-            placa_base = texto_cliente
+        if not placa_base or placa_base == "-":
+            placa_base = self.busca_cliente_os_var.get().strip()
 
         placa = "".join(ch for ch in placa_base.upper() if ch.isalnum())
 
@@ -4180,10 +4221,6 @@ class OrdemServicoFrame(tk.Frame):
                 nome_sem_extensao = os.path.splitext(nome_maiusculo)[0]
                 nome_limpo = "".join(ch for ch in nome_sem_extensao if ch.isalnum())
 
-                # Aceita:
-                # EOU3D73.jpg
-                # EOU3D73_02.jpg
-                # EOU3D73_03.jpg
                 if nome_limpo.startswith(placa):
                     caminho_completo = os.path.join(pasta_orcamentos, nome_arquivo)
                     arquivos_encontrados.append(caminho_completo)
@@ -4202,7 +4239,6 @@ class OrdemServicoFrame(tk.Frame):
             )
             return "break"
 
-        # Sempre pega o arquivo mais recente pela data de modificação.
         caminho_orcamento = max(
             arquivos_encontrados,
             key=lambda caminho: os.path.getmtime(caminho)
@@ -4211,6 +4247,8 @@ class OrdemServicoFrame(tk.Frame):
         self.orcamento_arquivo_path = caminho_orcamento
         nome_arquivo = os.path.basename(caminho_orcamento)
         self.orcamento_os_var.set(nome_arquivo)
+
+        self.carregar_itens_orcamento_json(caminho_orcamento)
 
         messagebox.showinfo(
             "Orçamento encontrado",
@@ -4250,7 +4288,7 @@ class OrdemServicoFrame(tk.Frame):
         tabela_frame.pack(fill="x", padx=14, pady=(0, 6))
         tabela_frame.pack_propagate(False)
 
-        cols = ("quantidade", "descricao", "valor_unitario", "valor_total")
+        cols = ("quantidade", "descricao", "valor_unitario")
         self.os_tree = ttk.Treeview(
             tabela_frame,
             columns=cols,
@@ -4259,14 +4297,12 @@ class OrdemServicoFrame(tk.Frame):
         )
 
         self.os_tree.heading("quantidade", text="QUANTIDADE", anchor="center")
-        self.os_tree.heading("descricao", text="DESCRIÇÃO DO SERVIÇO / PEÇA", anchor="center")
-        self.os_tree.heading("valor_unitario", text="VALOR UNITÁRIO (R$)", anchor="center")
-        self.os_tree.heading("valor_total", text="VALOR TOTAL (R$)", anchor="center")
+        self.os_tree.heading("descricao", text="DESCRIÇÃO", anchor="center")
+        self.os_tree.heading("valor_unitario", text="VALOR R$", anchor="center")
 
-        self.os_tree.column("quantidade", width=150, anchor="center", stretch=True)
-        self.os_tree.column("descricao", width=360, anchor="center", stretch=True)
-        self.os_tree.column("valor_unitario", width=190, anchor="center", stretch=True)
-        self.os_tree.column("valor_total", width=190, anchor="center", stretch=True)
+        self.os_tree.column("quantidade", width=150, minwidth=130, anchor="center", stretch=False)
+        self.os_tree.column("descricao", width=520, minwidth=380, anchor="center", stretch=True)
+        self.os_tree.column("valor_unitario", width=170, minwidth=180, anchor="center", stretch=False)
 
         self.os_tree.pack(side="left", fill="both", expand=True)
 
@@ -4385,10 +4421,6 @@ class OrdemServicoFrame(tk.Frame):
         else:
             self.busca_cliente_os_var.set(nome_txt)
 
-        if hasattr(self, "busca_cliente_os_entry"):
-            self.busca_cliente_os_entry.focus_set()
-            self.busca_cliente_os_entry.icursor(tk.END)
-
         self.combo_orcamentos_os.configure(
             values=[
                 "Selecione um orçamento...",
@@ -4397,6 +4429,62 @@ class OrdemServicoFrame(tk.Frame):
         )
         self.orcamento_os_var.set("Selecione um orçamento...")
 
+        if hasattr(self, "busca_cliente_os_entry"):
+            self.busca_cliente_os_entry.focus_set()
+            self.busca_cliente_os_entry.icursor(tk.END)
+
+
+
+    def carregar_itens_orcamento_json(self, caminho_orcamento):
+        try:
+            nome_base = os.path.splitext(os.path.basename(caminho_orcamento))[0]
+            pasta_dados = os.path.join(os.path.dirname(__file__), "dados_orcamentos")
+            caminho_json = os.path.join(pasta_dados, f"{nome_base}.json")
+
+            if not os.path.exists(caminho_json):
+                messagebox.showwarning(
+                    "Atenção",
+                    "O orçamento foi encontrado, mas os dados dos itens não foram localizados.\\n\\n"
+                    "Esse orçamento provavelmente foi criado antes da integração com JSON."
+                )
+                return
+
+            with open(caminho_json, "r", encoding="utf-8") as arquivo:
+                dados_orcamento = json.load(arquivo)
+
+            itens = dados_orcamento.get("itens", [])
+
+            for item in self.os_tree.get_children():
+                self.os_tree.delete(item)
+
+            for item in itens:
+                quantidade = str(item.get("quantidade", "")).strip()
+                descricao = str(item.get("descricao", "")).strip().upper()
+                valor_unitario = str(item.get("valor_unitario", "")).strip()
+
+                if not quantidade or not descricao:
+                    continue
+
+                valor_unitario_fmt = self._formatar_valor_digitado_os(valor_unitario)
+
+                self.os_tree.insert(
+                    "",
+                    "end",
+                    values=(quantidade, descricao, valor_unitario_fmt)
+                )
+
+            mao_obra = str(dados_orcamento.get("mao_de_obra", "")).replace("R$", "").strip()
+            if mao_obra:
+                self.mao_obra_os_var.set(mao_obra)
+
+            self.atualizar_totais_os()
+            self._atualizar_mensagem_vazia_os()
+
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Não foi possível carregar os itens do orçamento:\\n{e}"
+            )
 
 
     def buscar_orcamento_os(self):
@@ -4495,10 +4583,8 @@ class OrdemServicoFrame(tk.Frame):
             return False
 
         valor_unitario_fmt = self._formatar_valor_digitado_os(valor_unitario)
-        valor_total = int(quantidade) * self._valor_para_float_os(valor_unitario_fmt)
-        valor_total_fmt = f"{valor_total:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
-        valores = (quantidade, descricao, valor_unitario_fmt, valor_total_fmt)
+        valores = (quantidade, descricao, valor_unitario_fmt)
 
         if item_id:
             self.os_tree.item(item_id, values=valores)
@@ -4514,8 +4600,14 @@ class OrdemServicoFrame(tk.Frame):
 
         for item in self.os_tree.get_children():
             valores = self.os_tree.item(item, "values")
-            if len(valores) >= 4:
-                total_pecas += self._valor_para_float_os(valores[3])
+            if len(valores) >= 3:
+                try:
+                    quantidade = int(str(valores[0]).strip() or "0")
+                except Exception:
+                    quantidade = 0
+
+                valor_unitario = self._valor_para_float_os(valores[2])
+                total_pecas += quantidade * valor_unitario
 
         mao_obra = self._valor_para_float_os(self.mao_obra_os_var.get())
         total_servicos = mao_obra
