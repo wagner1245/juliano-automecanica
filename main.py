@@ -4136,15 +4136,6 @@ class OrdemServicoFrame(tk.Frame):
         self.combo_orcamentos_os.pack(side="left", fill="x", expand=True, ipady=4)
         self.combo_orcamentos_os.bind("<Button-1>", self.abrir_pasta_orcamentos)
 
-        self._botao_os(
-            linha_orcamento,
-            "📂 Buscar",
-            "#08803a",
-            self.abrir_pasta_orcamentos,
-            padx=10,
-            pady=6,
-        ).pack(side="left", padx=(8, 0))
-
     def abrir_pasta_orcamentos(self, event=None):
         texto_cliente = self.busca_cliente_os_var.get().strip().upper()
 
