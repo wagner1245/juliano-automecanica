@@ -1820,7 +1820,15 @@ class DeleteClientSearchDialog(tk.Toplevel):
 
         con = db()
         cur = con.cursor()
+
+        # Primeiro exclui os veículos vinculados ao cliente.
+        # Isso evita que placas antigas fiquem "órfãs" no banco
+        # e continuem bloqueando novos cadastros.
+        cur.execute("DELETE FROM vehicles WHERE client_id = ?", (cliente_id,))
+
+        # Depois exclui o cliente.
         cur.execute("DELETE FROM clients WHERE id = ?", (cliente_id,))
+
         con.commit()
         con.close()
 
@@ -3337,8 +3345,8 @@ class ServicesFrame(tk.Frame):
             var.set(texto_maiusculo)
 
     def vincular_cliente_visual(self):
-        nome = self.nome_orcamento_var.get().strip()
-        veiculo = self.veiculo_orcamento_var.get().strip()
+        nome = self.nome_orcamento_var.get().strip().upper()
+        veiculo = self.veiculo_orcamento_var.get().strip().upper()
         placa = self.placa_orcamento_var.get().strip().upper()
 
         if not nome:
@@ -3353,8 +3361,14 @@ class ServicesFrame(tk.Frame):
             messagebox.showwarning("Atenção", "Informe a placa do veículo.")
             return
 
+        # Cliente novo/manual não vem do banco.
         self.cliente_orcamento_id = None
-        self.busca_placa_var.set(placa)
+
+        # O campo "Buscar por Placa" é usado apenas para buscar cliente já cadastrado.
+        # Por isso, quando o cliente é novo/manual, ele deve ficar vazio.
+        self.busca_placa_var.set("")
+        self.esconder_sugestoes_placa()
+
         self.cliente_vinculado_var.set(f"{nome} - {veiculo} - {placa}")
 
     def limpar_cliente(self):
@@ -5962,8 +5976,33 @@ class ItemDialog(tk.Toplevel):
         self.on_add(desc, qty, unit)
         self.destroy()
 
+
+def limpar_veiculos_orfaos():
+    """Remove veículos que ficaram no banco sem cliente vinculado.
+
+    Isso corrige placas antigas que continuam bloqueando novos cadastros
+    mesmo depois do cliente ter sido excluído.
+    """
+    try:
+        con = db()
+        cur = con.cursor()
+        cur.execute(
+            """
+            DELETE FROM vehicles
+            WHERE client_id IS NULL
+               OR client_id NOT IN (
+                    SELECT id FROM clients
+               )
+            """
+        )
+        con.commit()
+        con.close()
+    except Exception as e:
+        print("Erro ao limpar veículos órfãos:", e)
+
 def main():
     init_db()
+    limpar_veiculos_orfaos()
     app = App()
     app.mainloop()
 
