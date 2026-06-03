@@ -4101,6 +4101,11 @@ class OrdemServicoFrame(tk.Frame):
         self.os_veiculo_var = tk.StringVar(value="-")
         self.os_placa_var = tk.StringVar(value="-")
         self.os_cidade_var = tk.StringVar(value="-")
+        self.os_endereco_var = tk.StringVar(value="-")
+        self.os_bairro_var = tk.StringVar(value="-")
+        self.os_cor_var = tk.StringVar(value="-")
+        self.os_ano_var = tk.StringVar(value="-")
+        self.os_km_var = tk.StringVar(value="-")
 
         self.os_total_pecas_var = tk.StringVar(value="R$ 0,00")
         self.os_total_servicos_var = tk.StringVar(value="R$ 0,00")
@@ -4526,8 +4531,13 @@ class OrdemServicoFrame(tk.Frame):
                     c.name,
                     c.phone,
                     c.city,
+                    c.address,
+                    c.district,
                     v.plate,
-                    v.vehicle
+                    v.vehicle,
+                    v.color,
+                    v.year,
+                    v.mileage
                 FROM vehicles v
                 INNER JOIN clients c ON c.id = v.client_id
                 WHERE UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) LIKE ?
@@ -4553,17 +4563,35 @@ class OrdemServicoFrame(tk.Frame):
             messagebox.showerror("Erro", f"Não foi possível buscar a placa:\n{e}")
 
     def carregar_cliente_na_os(self, cliente):
-        cliente_id, cpf, nome, telefone, cidade, placa, veiculo = cliente
+        (
+            cliente_id,
+            cpf,
+            nome,
+            telefone,
+            cidade,
+            endereco,
+            bairro,
+            placa,
+            veiculo,
+            cor,
+            ano,
+            km,
+        ) = cliente
 
         self.cliente_os_id = cliente_id
 
-        # Mantém os dados salvos internamente para usar depois ao salvar/imprimir a OS.
+        # Mantém os dados salvos internamente para usar depois ao visualizar a OS.
         self.os_nome_var.set(str(nome or "-").strip().upper())
         self.os_cpf_var.set(str(cpf or "-").strip())
         self.os_telefone_var.set(str(telefone or "-").strip())
         self.os_cidade_var.set(str(cidade or "-").strip().upper())
+        self.os_endereco_var.set(str(endereco or "-").strip().upper())
+        self.os_bairro_var.set(str(bairro or "-").strip().upper())
         self.os_placa_var.set(str(placa or "-").strip().upper())
         self.os_veiculo_var.set(str(veiculo or "-").strip().upper())
+        self.os_cor_var.set(str(cor or "-").strip().upper())
+        self.os_ano_var.set(str(ano or "-").strip())
+        self.os_km_var.set(str(km or "-").strip())
 
         nome_txt = str(nome or "").strip().upper()
         placa_txt = str(placa or "").strip().upper()
@@ -4671,6 +4699,11 @@ class OrdemServicoFrame(tk.Frame):
             self.os_veiculo_var,
             self.os_placa_var,
             self.os_cidade_var,
+            self.os_endereco_var,
+            self.os_bairro_var,
+            self.os_cor_var,
+            self.os_ano_var,
+            self.os_km_var,
         ):
             var.set("-")
 
@@ -4785,6 +4818,11 @@ class OrdemServicoFrame(tk.Frame):
         self.os_veiculo_var.set("-")
         self.os_placa_var.set("-")
         self.os_cidade_var.set("-")
+        self.os_endereco_var.set("-")
+        self.os_bairro_var.set("-")
+        self.os_cor_var.set("-")
+        self.os_ano_var.set("-")
+        self.os_km_var.set("-")
 
         if hasattr(self, "combo_orcamentos_os"):
             self.combo_orcamentos_os.configure(values=["Selecione um orçamento..."])
@@ -4856,15 +4894,279 @@ class OrdemServicoFrame(tk.Frame):
     def imprimir_os(self):
         messagebox.showinfo("Em desenvolvimento", "A impressão da OS será criada na próxima etapa.")
 
+    def _localizar_modelo_ordem_servico(self):
+        pasta_base = os.path.dirname(os.path.abspath(__file__))
+
+        possiveis_caminhos = [
+            os.path.join(pasta_base, "Ordem_de_Serviço.png"),
+            os.path.join(pasta_base, "Ordem_de_Servico.png"),
+            os.path.join(pasta_base, "assets", "Ordem_de_Serviço.png"),
+            os.path.join(pasta_base, "assets", "Ordem_de_Servico.png"),
+            os.path.join("/mnt/data", "Ordem_de_Serviço.png"),
+        ]
+
+        for caminho in possiveis_caminhos:
+            if os.path.exists(caminho):
+                return caminho
+
+        return None
+
+    def _fonte_os(self, tamanho, negrito=False):
+        fontes = [
+            "arialbd.ttf" if negrito else "arial.ttf",
+            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if negrito else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+            "/usr/share/fonts/truetype/liberation2/LiberationSans-Bold.ttf" if negrito else "/usr/share/fonts/truetype/liberation2/LiberationSans-Regular.ttf",
+        ]
+
+        for fonte in fontes:
+            try:
+                return ImageFont.truetype(fonte, tamanho)
+            except Exception:
+                pass
+
+        return ImageFont.load_default()
+
+    def _texto_limpo_os(self, valor):
+        texto = str(valor or "").strip()
+        return "" if texto == "-" else texto
+
+    def _encurtar_texto_os(self, texto, fonte, largura_maxima):
+        texto = str(texto or "").strip()
+
+        if not texto:
+            return ""
+
+        if hasattr(fonte, "getlength"):
+            largura = fonte.getlength(texto)
+        else:
+            largura = fonte.getbbox(texto)[2]
+
+        if largura <= largura_maxima:
+            return texto
+
+        while texto:
+            tentativa = texto[:-1].rstrip() + "..."
+            if hasattr(fonte, "getlength"):
+                largura = fonte.getlength(tentativa)
+            else:
+                largura = fonte.getbbox(tentativa)[2]
+
+            if largura <= largura_maxima:
+                return tentativa
+
+            texto = texto[:-1].rstrip()
+
+        return ""
+
+    def _desenhar_texto_os(self, draw, xy, texto, fonte, largura_maxima=None, anchor=None):
+        texto = str(texto or "").strip()
+
+        if largura_maxima:
+            texto = self._encurtar_texto_os(texto, fonte, largura_maxima)
+
+        draw.text(xy, texto, fill="#111827", font=fonte, anchor=anchor)
+
+    def _coletar_itens_visualizacao_os(self):
+        itens = []
+
+        for item in self.os_tree.get_children():
+            valores = self.os_tree.item(item, "values")
+
+            if len(valores) >= 3:
+                quantidade = str(valores[0] or "").strip()
+                descricao = str(valores[1] or "").strip().upper()
+                valor = str(valores[2] or "").strip()
+
+                if quantidade or descricao or valor:
+                    itens.append((quantidade, descricao, valor))
+
+        return itens
+
+    def _gerar_imagem_visualizacao_os(self):
+        caminho_modelo = self._localizar_modelo_ordem_servico()
+
+        if not caminho_modelo:
+            messagebox.showerror(
+                "Modelo da OS não encontrado",
+                "Coloque a imagem 'Ordem_de_Serviço.png' na mesma pasta do main.py "
+                "ou dentro da pasta assets."
+            )
+            return None
+
+        try:
+            imagem = Image.open(caminho_modelo).convert("RGB")
+            draw = ImageDraw.Draw(imagem)
+
+            fonte_campo = self._fonte_os(24, negrito=True)
+            fonte_campo_menor = self._fonte_os(21, negrito=True)
+            fonte_item = self._fonte_os(22, negrito=False)
+            fonte_item_negrito = self._fonte_os(22, negrito=True)
+            fonte_total = self._fonte_os(25, negrito=True)
+
+            data_atual = datetime.now().strftime("%d/%m/%Y")
+            itens = self._coletar_itens_visualizacao_os()
+
+            # Dados superiores da Ordem de Serviço.
+            dia_os, mes_os, ano_os = data_atual.split("/")
+            self._desenhar_texto_os(draw, (285, 282), dia_os, fonte_campo_menor, largura_maxima=45)
+            self._desenhar_texto_os(draw, (345, 282), mes_os, fonte_campo_menor, largura_maxima=45)
+            self._desenhar_texto_os(draw, (405, 282), ano_os, fonte_campo_menor, largura_maxima=85)
+            self._desenhar_texto_os(draw, (700, 282), "JULIANO", fonte_campo, largura_maxima=260)
+
+            self._desenhar_texto_os(draw, (150, 352), self._texto_limpo_os(self.os_cpf_var.get()), fonte_campo_menor, largura_maxima=220)
+            self._desenhar_texto_os(draw, (470, 352), self._texto_limpo_os(self.os_bairro_var.get()), fonte_campo_menor, largura_maxima=260)
+            self._desenhar_texto_os(draw, (855, 352), self._texto_limpo_os(self.os_km_var.get()), fonte_campo_menor, largura_maxima=150)
+
+            self._desenhar_texto_os(draw, (138, 454), self._texto_limpo_os(self.os_nome_var.get()), fonte_campo_menor, largura_maxima=285)
+            self._desenhar_texto_os(draw, (390, 454), self._texto_limpo_os(self.os_cidade_var.get()), fonte_campo_menor, largura_maxima=220)
+            self._desenhar_texto_os(draw, (650, 454), self._texto_limpo_os(self.os_veiculo_var.get()), fonte_campo_menor, largura_maxima=230)
+            self._desenhar_texto_os(draw, (965, 454), self._texto_limpo_os(self.os_cor_var.get()), fonte_campo_menor, largura_maxima=70)
+
+            self._desenhar_texto_os(draw, (170, 502), self._texto_limpo_os(self.os_endereco_var.get()), fonte_campo_menor, largura_maxima=280)
+            self._desenhar_texto_os(draw, (470, 502), self._texto_limpo_os(self.os_telefone_var.get()), fonte_campo_menor, largura_maxima=185)
+            self._desenhar_texto_os(draw, (700, 502), self._texto_limpo_os(self.os_placa_var.get()), fonte_campo_menor, largura_maxima=150)
+            self._desenhar_texto_os(draw, (958, 502), self._texto_limpo_os(self.os_ano_var.get()), fonte_campo_menor, largura_maxima=80)
+
+            # Itens da tabela.
+            y = 595
+            altura_linha = 36
+            max_itens = 17
+
+            for quantidade, descricao, valor in itens[:max_itens]:
+                self._desenhar_texto_os(draw, (145, y), quantidade, fonte_item_negrito, largura_maxima=90, anchor="mm")
+                self._desenhar_texto_os(draw, (255, y - 12), descricao, fonte_item, largura_maxima=520)
+                self._desenhar_texto_os(draw, (930, y), valor, fonte_item_negrito, largura_maxima=130, anchor="mm")
+                y += altura_linha
+
+            # Totais.
+            mao_obra = self._formatar_moeda_os(self._valor_para_float_os(self.mao_obra_os_var.get()))
+            total_pecas = self.os_total_pecas_var.get()
+            total_geral = self.os_total_geral_var.get()
+
+            self._desenhar_texto_os(draw, (275, 1242), mao_obra, fonte_total, largura_maxima=170)
+            self._desenhar_texto_os(draw, (275, 1290), total_pecas, fonte_total, largura_maxima=170)
+            self._desenhar_texto_os(draw, (785, 1328), total_geral, self._fonte_os(33, negrito=True), largura_maxima=210, anchor="mm")
+
+            return imagem
+
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Não foi possível gerar a visualização da Ordem de Serviço:\n{e}"
+            )
+            return None
+
     def salvar_os(self):
         if not self.cliente_os_id:
-            messagebox.showwarning("Atenção", "Selecione um cliente antes de salvar a OS.")
+            messagebox.showwarning("Atenção", "Selecione um cliente antes de criar a OS.")
             return
 
-        messagebox.showinfo("Sucesso", "Ordem de Serviço pronta para salvar no banco na próxima etapa.")
+        if (
+            not self.orcamento_arquivo_path
+            or not self.orcamento_os_var.get()
+            or self.orcamento_os_var.get() == "Selecione um orçamento..."
+        ):
+            messagebox.showwarning("Atenção", "Selecione um orçamento antes de criar a OS.")
+            return
+
+        if not self.os_tree.get_children():
+            messagebox.showwarning("Atenção", "Adicione pelo menos um item antes de criar a OS.")
+            return
+
+        self._formatar_mao_obra_os()
+        imagem_os = self._gerar_imagem_visualizacao_os()
+
+        if imagem_os:
+            OrdemServicoPreview(self, imagem_os)
 
     def refresh(self):
         pass
+
+
+
+class OrdemServicoPreview(tk.Toplevel):
+    def __init__(self, parent, imagem_os):
+        super().__init__(parent)
+        self.parent = parent
+        self.imagem_os_original = imagem_os
+
+        self.title("Visualização da Ordem de Serviço")
+        self.geometry("850x720")
+        self.minsize(760, 620)
+        self.configure(bg="#f5f6f8")
+        self.transient(parent)
+        self.grab_set()
+
+        topo = tk.Frame(self, bg="#f5f6f8")
+        topo.pack(fill="x", padx=12, pady=(10, 6))
+
+        tk.Label(
+            topo,
+            text="Pré-visualização da Ordem de Serviço",
+            bg="#f5f6f8",
+            fg="#111827",
+            font=("Segoe UI", 14, "bold"),
+        ).pack(side="left")
+
+        tk.Button(
+            topo,
+            text="Fechar",
+            bg="#6b7280",
+            fg="white",
+            activebackground="#4b5563",
+            activeforeground="white",
+            bd=0,
+            padx=14,
+            pady=5,
+            font=("Segoe UI", 10, "bold"),
+            command=self.destroy,
+        ).pack(side="right")
+
+        corpo = tk.Frame(self, bg="#e5e7eb")
+        corpo.pack(fill="both", expand=True, padx=12, pady=(0, 12))
+
+        self.canvas = tk.Canvas(corpo, bg="#e5e7eb", highlightthickness=0)
+        self.canvas.pack(side="left", fill="both", expand=True)
+
+        scroll_y = ttk.Scrollbar(corpo, orient="vertical", command=self.canvas.yview)
+        scroll_y.pack(side="right", fill="y")
+        self.canvas.configure(yscrollcommand=scroll_y.set)
+
+        self.frame_imagem = tk.Frame(self.canvas, bg="#e5e7eb")
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.frame_imagem, anchor="nw")
+
+        self.frame_imagem.bind("<Configure>", self._atualizar_scroll)
+        self.canvas.bind("<Configure>", self._redimensionar_preview)
+
+        self.imagem_tk = None
+        self.label_imagem = tk.Label(self.frame_imagem, bg="#e5e7eb")
+        self.label_imagem.pack(padx=12, pady=12)
+
+        self._renderizar_imagem()
+
+    def _atualizar_scroll(self, event=None):
+        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+
+    def _redimensionar_preview(self, event=None):
+        self._renderizar_imagem()
+
+    def _renderizar_imagem(self):
+        largura_canvas = max(self.canvas.winfo_width(), 760)
+        largura_alvo = min(760, largura_canvas - 40)
+
+        largura_original, altura_original = self.imagem_os_original.size
+        proporcao = largura_alvo / largura_original
+        altura_alvo = int(altura_original * proporcao)
+
+        imagem_redimensionada = self.imagem_os_original.resize(
+            (int(largura_alvo), altura_alvo),
+            Image.LANCZOS
+        )
+
+        self.imagem_tk = ImageTk.PhotoImage(imagem_redimensionada)
+        self.label_imagem.configure(image=self.imagem_tk)
+        self._atualizar_scroll()
+
 
 
 class ItemOSDialog(tk.Toplevel):
