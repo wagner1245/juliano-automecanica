@@ -4385,7 +4385,8 @@ class OrdemServicoFrame(tk.Frame):
         self._botao_os(botoes, "+  Adicionar Item", "#08803a", self.adicionar_item_os, largura=15).pack(side="left", padx=(0, 8))
         self._botao_os(botoes, "✎  Editar Item", "#0b63ce", self.editar_item_os, largura=13).pack(side="left", padx=(0, 8))
         self._botao_os(botoes, "🗑  Excluir Item", "#ef233c", self.excluir_item_os, largura=13).pack(side="left", padx=(0, 8))
-        self._botao_os(botoes, "📄  Criar Ordem de Serviço", "#7b2cbf", self.salvar_os, largura=22).pack(side="left")
+        self._botao_os(botoes, "📄  Criar Ordem de Serviço", "#7b2cbf", self.salvar_os, largura=22).pack(side="left", padx=(0, 8))
+        self._botao_os(botoes, "🧹  Limpar", "#6b7280", self.limpar_tela_os, largura=10).pack(side="left")
 
     def _montar_total_ordem_os(self):
         total_box = tk.Frame(
@@ -4699,6 +4700,33 @@ class OrdemServicoFrame(tk.Frame):
 
         self.atualizar_totais_os()
         self._atualizar_mensagem_vazia_os()
+
+    def limpar_tela_os(self):
+        self.cliente_os_id = None
+        self.orcamento_arquivo_path = None
+
+        self.busca_cliente_os_var.set("")
+        self.orcamento_os_var.set("Selecione um orçamento...")
+        self.mao_obra_os_var.set("0,00")
+
+        self.os_nome_var.set("-")
+        self.os_cpf_var.set("-")
+        self.os_telefone_var.set("-")
+        self.os_veiculo_var.set("-")
+        self.os_placa_var.set("-")
+        self.os_cidade_var.set("-")
+
+        if hasattr(self, "combo_orcamentos_os"):
+            self.combo_orcamentos_os.configure(values=["Selecione um orçamento..."])
+
+        for item in self.os_tree.get_children():
+            self.os_tree.delete(item)
+
+        self.atualizar_totais_os()
+        self._atualizar_mensagem_vazia_os()
+
+        if hasattr(self, "busca_cliente_os_entry"):
+            self.busca_cliente_os_entry.focus_set()
 
     def salvar_item_os(self, quantidade, descricao, valor_unitario, item_id=None):
         quantidade = str(quantidade).strip()
