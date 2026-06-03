@@ -4578,10 +4578,24 @@ class OrdemServicoFrame(tk.Frame):
         return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
     def _formatar_valor_digitado_os(self, valor):
-        texto = "".join(ch for ch in str(valor or "") if ch.isdigit())
-        if not texto:
+        texto_original = str(valor or "").replace("R$", "").strip()
+
+        if not texto_original:
             return "0,00"
-        numero = int(texto) / 100
+
+        # Se o usuário digitar 670, o sistema deve entender como 670,00,
+        # e não como 6,70.
+        # Também aceita valores digitados com vírgula, ponto decimal ou separador de milhar.
+        if "," in texto_original:
+            texto = texto_original.replace(".", "").replace(",", ".")
+        else:
+            texto = texto_original.replace(" ", "")
+
+        try:
+            numero = float(texto)
+        except Exception:
+            numero = 0.0
+
         return f"{numero:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
     def _formatar_mao_obra_os(self):
