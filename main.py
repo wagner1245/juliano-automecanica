@@ -4347,12 +4347,45 @@ class OrdemServicoFrame(tk.Frame):
         tabela_frame.pack(fill="x", padx=14, pady=(0, 6))
         tabela_frame.pack_propagate(False)
 
+        style = ttk.Style()
+        try:
+            style.theme_use("clam")
+        except Exception:
+            pass
+
+        style.configure(
+            "OrdemServico.Treeview",
+            background="white",
+            foreground="#111827",
+            fieldbackground="white",
+            rowheight=26,
+            bordercolor="#cbd5e1",
+            borderwidth=1,
+            relief="solid",
+            font=("Segoe UI", 10),
+        )
+        style.configure(
+            "OrdemServico.Treeview.Heading",
+            background="#f3f4f6",
+            foreground="#111827",
+            bordercolor="#cbd5e1",
+            borderwidth=1,
+            relief="solid",
+            font=("Segoe UI", 10, "bold"),
+        )
+        style.map(
+            "OrdemServico.Treeview",
+            background=[("selected", "#dbeafe")],
+            foreground=[("selected", "#111827")],
+        )
+
         cols = ("quantidade", "descricao", "valor_unitario")
         self.os_tree = ttk.Treeview(
             tabela_frame,
             columns=cols,
             show="headings",
             height=10,
+            style="OrdemServico.Treeview",
         )
 
         self.os_tree.heading("quantidade", text="QUANTIDADE", anchor="center")
@@ -4362,6 +4395,9 @@ class OrdemServicoFrame(tk.Frame):
         self.os_tree.column("quantidade", width=150, minwidth=130, anchor="center", stretch=False)
         self.os_tree.column("descricao", width=520, minwidth=380, anchor="center", stretch=True)
         self.os_tree.column("valor_unitario", width=170, minwidth=180, anchor="center", stretch=False)
+
+        self.os_tree.tag_configure("linha_par_os", background="#f8fafc")
+        self.os_tree.tag_configure("linha_impar_os", background="#eef2f7")
 
         self.os_tree.pack(side="left", fill="both", expand=True)
 
@@ -4594,6 +4630,8 @@ class OrdemServicoFrame(tk.Frame):
                     values=(quantidade, descricao, valor_unitario_fmt)
                 )
 
+            self._atualizar_linhas_tabela_os()
+
             mao_obra = str(dados_orcamento.get("mao_de_obra", "")).replace("R$", "").strip()
             if mao_obra:
                 self.mao_obra_os_var.set(mao_obra)
@@ -4607,6 +4645,11 @@ class OrdemServicoFrame(tk.Frame):
                 f"Não foi possível carregar os itens do orçamento:\\n{e}"
             )
 
+
+    def _atualizar_linhas_tabela_os(self):
+        for indice, item in enumerate(self.os_tree.get_children()):
+            tag = "linha_par_os" if indice % 2 == 0 else "linha_impar_os"
+            self.os_tree.item(item, tags=(tag,))
 
     def buscar_orcamento_os(self):
         if not self.cliente_os_id:
@@ -4685,6 +4728,7 @@ class OrdemServicoFrame(tk.Frame):
             return
 
         self.os_tree.delete(selecionado[0])
+        self._atualizar_linhas_tabela_os()
         self.atualizar_totais_os()
         self._atualizar_mensagem_vazia_os()
 
@@ -4698,6 +4742,7 @@ class OrdemServicoFrame(tk.Frame):
         for item in self.os_tree.get_children():
             self.os_tree.delete(item)
 
+        self._atualizar_linhas_tabela_os()
         self.atualizar_totais_os()
         self._atualizar_mensagem_vazia_os()
 
@@ -4722,6 +4767,7 @@ class OrdemServicoFrame(tk.Frame):
         for item in self.os_tree.get_children():
             self.os_tree.delete(item)
 
+        self._atualizar_linhas_tabela_os()
         self.atualizar_totais_os()
         self._atualizar_mensagem_vazia_os()
 
@@ -4750,6 +4796,7 @@ class OrdemServicoFrame(tk.Frame):
         else:
             self.os_tree.insert("", "end", values=valores)
 
+        self._atualizar_linhas_tabela_os()
         self.atualizar_totais_os()
         self._atualizar_mensagem_vazia_os()
         return True
