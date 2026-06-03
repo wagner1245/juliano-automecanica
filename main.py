@@ -4707,6 +4707,31 @@ class OrdemServicoFrame(tk.Frame):
         self.atualizar_totais_os()
 
     def adicionar_item_os(self):
+        placa_atual = str(self.os_placa_var.get() or "").strip()
+        orcamento_atual = str(self.orcamento_os_var.get() or "").strip()
+
+        if (
+            not self.cliente_os_id
+            or not placa_atual
+            or placa_atual == "-"
+        ):
+            messagebox.showwarning(
+                "Atenção",
+                "Busque uma placa/cliente antes de adicionar itens na Ordem de Serviço."
+            )
+            return
+
+        if (
+            not self.orcamento_arquivo_path
+            or not orcamento_atual
+            or orcamento_atual == "Selecione um orçamento..."
+        ):
+            messagebox.showwarning(
+                "Atenção",
+                "Selecione um orçamento antes de adicionar itens na Ordem de Serviço."
+            )
+            return
+
         ItemOSDialog(self, titulo="Adicionar Item")
 
     def editar_item_os(self):
