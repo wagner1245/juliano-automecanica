@@ -4424,7 +4424,7 @@ class OrdemServicoFrame(tk.Frame):
 
         tk.Label(
             total_box,
-            text="Orçamento:",
+            text="Total de Peças:",
             bg="#f8fafc",
             fg="#111827",
             font=("Segoe UI", 10, "bold"),
