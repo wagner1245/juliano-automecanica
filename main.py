@@ -4383,7 +4383,7 @@ class OrdemServicoFrame(tk.Frame):
         self._botao_os(botoes, "+  Adicionar Item", "#08803a", self.adicionar_item_os, largura=15).pack(side="left", padx=(0, 8))
         self._botao_os(botoes, "✎  Editar Item", "#0b63ce", self.editar_item_os, largura=13).pack(side="left", padx=(0, 8))
         self._botao_os(botoes, "🗑  Excluir Item", "#ef233c", self.excluir_item_os, largura=13).pack(side="left", padx=(0, 8))
-        self._botao_os(botoes, "🖨  Imprimir OS", "#6b7280", self.imprimir_os, largura=14).pack(side="left", padx=(0, 8))
+        self._botao_os(botoes, "📄  Criar Ordem de Serviço", "#7b2cbf", self.salvar_os, largura=22).pack(side="left")
 
     def _total_os_label(self, parent, titulo, var, cor):
         tk.Label(parent, text=titulo, bg="#f8fafc", fg="#111827", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 6))
@@ -4578,24 +4578,10 @@ class OrdemServicoFrame(tk.Frame):
         return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
     def _formatar_valor_digitado_os(self, valor):
-        texto_original = str(valor or "").replace("R$", "").strip()
-
-        if not texto_original:
+        texto = "".join(ch for ch in str(valor or "") if ch.isdigit())
+        if not texto:
             return "0,00"
-
-        # Se o usuário digitar 670, o sistema deve entender como 670,00,
-        # e não como 6,70.
-        # Também aceita valores digitados com vírgula, ponto decimal ou separador de milhar.
-        if "," in texto_original:
-            texto = texto_original.replace(".", "").replace(",", ".")
-        else:
-            texto = texto_original.replace(" ", "")
-
-        try:
-            numero = float(texto)
-        except Exception:
-            numero = 0.0
-
+        numero = int(texto) / 100
         return f"{numero:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
     def _formatar_mao_obra_os(self):
