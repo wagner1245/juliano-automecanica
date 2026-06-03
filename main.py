@@ -1339,7 +1339,7 @@ class SearchClientDialog(tk.Toplevel):
 
         tk.Label(
             frame,
-            text="Buscar Cliente por Placa ou Telefone:",
+            text="Buscar Cliente por CPF, Placa ou Telefone:",
             bg="#f5f6f8",
             fg="#111827",
             font=("Segoe UI", 10, "bold")
@@ -1408,7 +1408,7 @@ class SearchClientDialog(tk.Toplevel):
         valor_placa = "".join(ch for ch in valor_original.upper() if ch.isalnum())
 
         if not valor_original:
-            messagebox.showwarning("Atenção", "Digite a placa ou telefone do cliente.")
+            messagebox.showwarning("Atenção", "Digite o CPF, placa ou telefone do cliente.")
             return
 
         con = db()
@@ -1419,12 +1419,14 @@ class SearchClientDialog(tk.Toplevel):
             SELECT DISTINCT c.id
             FROM clients c
             LEFT JOIN vehicles v ON v.client_id = c.id
-            WHERE c.phone = ?
+            WHERE c.cpf = ?
+               OR c.phone = ?
                OR UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) LIKE ?
             ORDER BY c.name
             LIMIT 1
             """,
             (
+                valor_numerico,
                 valor_numerico,
                 valor_placa,
             )
@@ -1457,7 +1459,7 @@ class EditClientSearchDialog(tk.Toplevel):
 
         tk.Label(
             frame,
-            text="Digite Placa ou Telefone do Cliente:",
+            text="Digite CPF, Placa ou Telefone do Cliente:",
             bg="#f5f6f8",
             fg="#111827",
             font=("Segoe UI", 10, "bold")
@@ -1725,7 +1727,7 @@ class DeleteClientSearchDialog(tk.Toplevel):
 
         tk.Label(
             frame,
-            text="Digite Placa ou Telefone do Cliente:",
+            text="Digite CPF, Placa ou Telefone do Cliente:",
             bg="#f5f6f8",
             fg="#111827",
             font=("Segoe UI", 10, "bold")
@@ -1777,11 +1779,11 @@ class DeleteClientSearchDialog(tk.Toplevel):
 
     def buscar_cliente(self):
         valor_original = self.search_var.get().strip().upper()
-        valor_telefone = "".join(ch for ch in valor_original if ch.isdigit())
+        valor_numerico = "".join(ch for ch in valor_original if ch.isdigit())
         valor_placa = "".join(ch for ch in valor_original if ch.isalnum())
 
         if not valor_original:
-            messagebox.showwarning("Atenção", "Digite a placa ou telefone do cliente.")
+            messagebox.showwarning("Atenção", "Digite CPF, placa ou telefone do cliente.")
             return
 
         con = db()
@@ -1791,12 +1793,13 @@ class DeleteClientSearchDialog(tk.Toplevel):
             SELECT DISTINCT c.id, c.cpf, c.name, c.phone, c.city, c.address, c.district
             FROM clients c
             LEFT JOIN vehicles v ON v.client_id = c.id
-            WHERE c.phone = ?
+            WHERE c.cpf = ?
+               OR c.phone = ?
                OR UPPER(REPLACE(REPLACE(v.plate, '-', ''), ' ', '')) LIKE ?
             ORDER BY c.name
             LIMIT 1
             """,
-            (valor_telefone, valor_placa + '%')
+            (valor_numerico, valor_numerico, valor_placa + '%')
         )
         cliente = cur.fetchone()
         con.close()
