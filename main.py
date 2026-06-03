@@ -4093,6 +4093,7 @@ class OrdemServicoFrame(tk.Frame):
         self.orcamento_os_var = tk.StringVar(value="Selecione um orçamento...")
         self.orcamento_arquivo_path = None
         self.mao_obra_os_var = tk.StringVar(value="0,00")
+        self.mao_obra_os_var.trace_add("write", lambda *args: self.atualizar_totais_os())
 
         self.os_nome_var = tk.StringVar(value="-")
         self.os_cpf_var = tk.StringVar(value="-")
@@ -4156,6 +4157,7 @@ class OrdemServicoFrame(tk.Frame):
 
         self._montar_topo_busca_os()
         self._montar_itens_os()
+        self._montar_total_ordem_os()
         self._montar_botoes_finais_os()
 
     def _montar_topo_busca_os(self):
@@ -4322,9 +4324,9 @@ class OrdemServicoFrame(tk.Frame):
             bg="white",
             highlightbackground="#d7dce2",
             highlightthickness=1,
-            height=360,
+            height=340,
         )
-        itens.pack(fill="x", padx=16, pady=(0, 8))
+        itens.pack(fill="x", padx=16, pady=(0, 6))
         itens.pack_propagate(False)
 
         tk.Label(
@@ -4340,7 +4342,7 @@ class OrdemServicoFrame(tk.Frame):
             bg="white",
             highlightbackground="#cbd5e1",
             highlightthickness=1,
-            height=265,
+            height=245,
         )
         tabela_frame.pack(fill="x", padx=14, pady=(0, 6))
         tabela_frame.pack_propagate(False)
@@ -4385,23 +4387,84 @@ class OrdemServicoFrame(tk.Frame):
         self._botao_os(botoes, "🗑  Excluir Item", "#ef233c", self.excluir_item_os, largura=13).pack(side="left", padx=(0, 8))
         self._botao_os(botoes, "📄  Criar Ordem de Serviço", "#7b2cbf", self.salvar_os, largura=22).pack(side="left")
 
+    def _montar_total_ordem_os(self):
+        total_box = tk.Frame(
+            self.os_card,
+            bg="#f8fafc",
+            highlightbackground="#d7dce2",
+            highlightthickness=1,
+            height=42,
+            width=650,
+        )
+        total_box.pack(anchor="w", padx=16, pady=(0, 6))
+        total_box.pack_propagate(False)
+
+        tk.Label(
+            total_box,
+            text="Mão de Obra:",
+            bg="#f8fafc",
+            fg="#111827",
+            font=("Segoe UI", 10, "bold"),
+        ).pack(side="left", padx=(14, 8))
+
+        self.mao_obra_os_entry = tk.Entry(
+            total_box,
+            textvariable=self.mao_obra_os_var,
+            width=10,
+            justify="center",
+            font=("Segoe UI", 10, "bold"),
+            relief="solid",
+            bd=1,
+        )
+        self.mao_obra_os_entry.pack(side="left", padx=(0, 22), ipady=2)
+        self.mao_obra_os_entry.bind("<FocusOut>", lambda event: self._formatar_mao_obra_os())
+        self.mao_obra_os_entry.bind("<Return>", lambda event: self._formatar_mao_obra_os())
+
+        tk.Frame(total_box, bg="#cbd5e1", width=1, height=24).pack(side="left", padx=(0, 22))
+
+        tk.Label(
+            total_box,
+            text="Orçamento:",
+            bg="#f8fafc",
+            fg="#111827",
+            font=("Segoe UI", 10, "bold"),
+        ).pack(side="left", padx=(0, 8))
+
+        tk.Label(
+            total_box,
+            textvariable=self.os_total_pecas_var,
+            bg="#f8fafc",
+            fg="#08803a",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(side="left", padx=(0, 22))
+
+        tk.Frame(total_box, bg="#cbd5e1", width=1, height=24).pack(side="left", padx=(0, 22))
+
+        tk.Label(
+            total_box,
+            text="Total da OS:",
+            bg="#f8fafc",
+            fg="#111827",
+            font=("Segoe UI", 10, "bold"),
+        ).pack(side="left", padx=(0, 8))
+
+        tk.Label(
+            total_box,
+            textvariable=self.os_total_geral_var,
+            bg="#f8fafc",
+            fg="#7b2cbf",
+            font=("Segoe UI", 12, "bold"),
+        ).pack(side="left")
+
     def _total_os_label(self, parent, titulo, var, cor):
         tk.Label(parent, text=titulo, bg="#f8fafc", fg="#111827", font=("Segoe UI", 9, "bold")).pack(side="left", padx=(0, 6))
         tk.Label(parent, textvariable=var, bg="#f8fafc", fg=cor, font=("Segoe UI", 10, "bold")).pack(side="left", padx=(0, 20))
 
 
     def _montar_botoes_finais_os(self):
-        botoes = tk.Frame(self.os_card, bg="white")
-        botoes.pack(fill="x", padx=16, pady=(0, 0))
-
-        self._botao_os(
-            botoes,
-            "💾  Salvar OS",
-            "#08803a",
-            self.salvar_os,
-            padx=20,
-            pady=7,
-        ).pack(side="right")
+        # O botão principal agora fica junto dos itens: "Criar Ordem de Serviço".
+        # Este método fica reservado para ações futuras na parte inferior da OS.
+        pass
 
     def _normalizar_busca_os(self, valor):
         return "".join(ch for ch in str(valor or "").upper() if ch.isalnum())
@@ -4578,10 +4641,21 @@ class OrdemServicoFrame(tk.Frame):
         return f"R$ {valor:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
     def _formatar_valor_digitado_os(self, valor):
-        texto = "".join(ch for ch in str(valor or "") if ch.isdigit())
+        texto = str(valor or "").replace("R$", "").strip()
+
         if not texto:
             return "0,00"
-        numero = int(texto) / 100
+
+        # Se o usuário digitar 670, o sistema entende 670,00.
+        # Se digitar 6,70 ou 6.70, mantém como valor decimal.
+        try:
+            if "," in texto:
+                numero = float(texto.replace(".", "").replace(",", "."))
+            else:
+                numero = float(texto.replace(".", ""))
+        except Exception:
+            numero = 0.0
+
         return f"{numero:,.2f}".replace(",", "X").replace(".", ",").replace("X", ".")
 
     def _formatar_mao_obra_os(self):
@@ -4657,14 +4731,13 @@ class OrdemServicoFrame(tk.Frame):
 
         for item in self.os_tree.get_children():
             valores = self.os_tree.item(item, "values")
-            if len(valores) >= 3:
-                try:
-                    quantidade = int(str(valores[0]).strip() or "0")
-                except Exception:
-                    quantidade = 0
 
-                valor_unitario = self._valor_para_float_os(valores[2])
-                total_pecas += quantidade * valor_unitario
+            # Na Ordem de Serviço, o campo VALOR R$ já representa o valor final
+            # daquele item. A quantidade é apenas informativa, então NÃO deve
+            # multiplicar quantidade x valor.
+            if len(valores) >= 3:
+                valor_item = self._valor_para_float_os(valores[2])
+                total_pecas += valor_item
 
         mao_obra = self._valor_para_float_os(self.mao_obra_os_var.get())
         total_servicos = mao_obra
