@@ -4701,7 +4701,9 @@ class ItemOSDialog(tk.Toplevel):
         self.item_id = item_id
 
         self.title(titulo)
-        self.geometry("400x250")
+        largura_janela = 400
+        altura_janela = 360
+        self.geometry(f"{largura_janela}x{altura_janela}")
         self.resizable(False, False)
         self.configure(bg="#f5f6f8")
         self.grab_set()
@@ -4725,7 +4727,7 @@ class ItemOSDialog(tk.Toplevel):
 
         self._campo(frame, "Quantidade:", self.quantidade_var)
         self._campo(frame, "Descrição do Serviço / Peça:", self.descricao_var)
-        self._campo(frame, "Valor Unitário:", self.valor_var)
+        self._campo(frame, "Valor:", self.valor_var)
 
         botoes = tk.Frame(frame, bg="#f5f6f8")
         botoes.pack(fill="x", pady=(12, 0))
@@ -4761,9 +4763,9 @@ class ItemOSDialog(tk.Toplevel):
         self.update_idletasks()
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
-        x = (sw // 2) - (self.winfo_width() // 2)
-        y = (sh // 2) - (self.winfo_height() // 2)
-        self.geometry(f"+{x}+{y}")
+        x = (sw // 2) - (largura_janela // 2)
+        y = (sh // 2) - (altura_janela // 2)
+        self.geometry(f"{largura_janela}x{altura_janela}+{x}+{y}")
 
     def _campo(self, parent, label, var):
         tk.Label(
