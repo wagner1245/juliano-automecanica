@@ -56,6 +56,12 @@ def init_db():
     if "year" not in client_cols:
         cur.execute("ALTER TABLE clients ADD COLUMN year TEXT")
 
+    if "cep" not in client_cols:
+        cur.execute("ALTER TABLE clients ADD COLUMN cep TEXT")
+
+    if "number" not in client_cols:
+        cur.execute("ALTER TABLE clients ADD COLUMN number TEXT")
+
     cur.execute("""
     CREATE TABLE IF NOT EXISTS services(
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -142,6 +148,8 @@ def init_db():
         address TEXT,
         district TEXT,
         city TEXT,
+        cep TEXT,
+        number TEXT,
         phone TEXT,
         vehicle TEXT,
         mileage TEXT,
@@ -188,6 +196,8 @@ def init_db():
     add_column_if_not_exists(cur, "clients", "address", "TEXT")
     add_column_if_not_exists(cur, "clients", "district", "TEXT")
     add_column_if_not_exists(cur, "clients", "city", "TEXT")
+    add_column_if_not_exists(cur, "clients", "cep", "TEXT")
+    add_column_if_not_exists(cur, "clients", "number", "TEXT")
     add_column_if_not_exists(cur, "clients", "phone", "TEXT")
     add_column_if_not_exists(cur, "clients", "vehicle", "TEXT")
     add_column_if_not_exists(cur, "clients", "mileage", "TEXT")

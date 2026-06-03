@@ -397,25 +397,31 @@ class ClientsFrame(tk.Frame):
         self.cidade_var = tk.StringVar()
         self.endereco_var = tk.StringVar()
         self.bairro_var = tk.StringVar()
+        self.cep_var = tk.StringVar()
+        self.numero_var = tk.StringVar()
 
         self.cpf_var.trace_add("write", self._limitar_cpf)
         self.telefone_var.trace_add("write", self._limitar_telefone)
+        self.cep_var.trace_add("write", self._limitar_cep)
 
         for var in (
             self.nome_var,
             self.cidade_var,
             self.endereco_var,
             self.bairro_var,
+            self.numero_var,
         ):
             var.trace_add("write", lambda *args, v=var: self._maiusculo_var(v))
 
         self._campo(form, "CPF:", self.cpf_var, 0, 0, width=27)
         self._campo(form, "Nome:", self.nome_var, 0, 1, width=38)
         self._campo(form, "Telefone:", self.telefone_var, 0, 2, width=27)
+        self._campo(form, "CEP:", self.cep_var, 0, 3, width=14)
 
         self._campo(form, "Cidade:", self.cidade_var, 1, 0, width=27)
         self._campo(form, "Endereço:", self.endereco_var, 1, 1, width=38)
         self._campo(form, "Bairro:", self.bairro_var, 1, 2, width=27)
+        self._campo(form, "Número:", self.numero_var, 1, 3, width=14)
 
         separador = tk.Frame(main_card, bg="#e5e7eb", height=1)
         separador.pack(fill="x", padx=22, pady=(0, 7))
@@ -862,6 +868,8 @@ class ClientsFrame(tk.Frame):
             "city": self.cidade_var.get().strip(),
             "address": self.endereco_var.get().strip(),
             "district": self.bairro_var.get().strip(),
+            "cep": self.cep_var.get().strip(),
+            "number": self.numero_var.get().strip(),
         }
 
     def _coletar_veiculos_tela(self):
@@ -966,6 +974,8 @@ class ClientsFrame(tk.Frame):
         self.cidade_var.set("")
         self.endereco_var.set("")
         self.bairro_var.set("")
+        self.cep_var.set("")
+        self.numero_var.set("")
         self.cliente_carregado_id = None
         self.dados_originais_cliente = None
         self.veiculos_originais = []
@@ -983,6 +993,11 @@ class ClientsFrame(tk.Frame):
         texto = "".join(ch for ch in self.telefone_var.get() if ch.isdigit())[:11]
         if self.telefone_var.get() != texto:
             self.telefone_var.set(texto)
+
+    def _limitar_cep(self, *args):
+        texto = "".join(ch for ch in self.cep_var.get() if ch.isdigit())[:8]
+        if self.cep_var.get() != texto:
+            self.cep_var.set(texto)
 
 
     def _maiusculo_var(self, var):
@@ -1048,9 +1063,9 @@ class ClientsFrame(tk.Frame):
             cur.execute(
                 """
                 INSERT INTO clients (
-                    cpf, name, phone, city, address, district, created_at
+                    cpf, name, phone, city, address, district, cep, number, created_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     dados["cpf"],
@@ -1059,6 +1074,8 @@ class ClientsFrame(tk.Frame):
                     dados["city"],
                     dados["address"],
                     dados["district"],
+                    dados["cep"],
+                    dados["number"],
                     datetime.now().isoformat(timespec="seconds"),
                 ),
             )
@@ -1132,6 +1149,8 @@ class ClientsFrame(tk.Frame):
             "city": dados["city"],
             "address": dados["address"],
             "district": dados["district"],
+            "cep": dados["cep"],
+            "number": dados["number"],
         }
 
         if (
@@ -1172,7 +1191,7 @@ class ClientsFrame(tk.Frame):
             cur.execute(
                 """
                 UPDATE clients
-                SET cpf = ?, name = ?, phone = ?, city = ?, address = ?, district = ?
+                SET cpf = ?, name = ?, phone = ?, city = ?, address = ?, district = ?, cep = ?, number = ?
                 WHERE id = ?
                 """,
                 (
@@ -1182,6 +1201,8 @@ class ClientsFrame(tk.Frame):
                     dados["city"],
                     dados["address"],
                     dados["district"],
+                    dados["cep"],
+                    dados["number"],
                     self.cliente_carregado_id,
                 ),
             )
@@ -1239,7 +1260,7 @@ class ClientsFrame(tk.Frame):
 
         cur.execute(
             """
-            SELECT cpf, name, phone, city, address, district
+            SELECT cpf, name, phone, city, address, district, cep, number
             FROM clients
             WHERE id = ?
             """,
@@ -1273,6 +1294,8 @@ class ClientsFrame(tk.Frame):
         self.cidade_var.set(cliente[3] or "")
         self.endereco_var.set(cliente[4] or "")
         self.bairro_var.set(cliente[5] or "")
+        self.cep_var.set(cliente[6] or "")
+        self.numero_var.set(cliente[7] or "")
 
         self.veiculos_ids = {}
 
@@ -1302,6 +1325,8 @@ class ClientsFrame(tk.Frame):
             "city": str(cliente[3] or "").strip(),
             "address": str(cliente[4] or "").strip(),
             "district": str(cliente[5] or "").strip(),
+            "cep": str(cliente[6] or "").strip(),
+            "number": str(cliente[7] or "").strip(),
         }
         self.veiculos_originais = [
             (
@@ -1511,7 +1536,7 @@ class EditClientSearchDialog(tk.Toplevel):
         cur = con.cursor()
         cur.execute(
             """
-            SELECT id, cpf, name, phone, city, address, district
+            SELECT id, cpf, name, phone, city, address, district, cep, number
             FROM clients
             WHERE cpf = ? OR phone = ?
             """,
@@ -1535,7 +1560,7 @@ class EditClientDataDialog(tk.Toplevel):
         self.cliente_id = cliente[0]
 
         self.title("Editar Cliente")
-        self.geometry("480x370")
+        self.geometry("480x430")
         self.resizable(False, False)
         self.configure(bg="#f5f6f8")
         self.grab_set()
@@ -1546,15 +1571,19 @@ class EditClientDataDialog(tk.Toplevel):
         self.cidade_var = tk.StringVar(value=cliente[4] or "")
         self.endereco_var = tk.StringVar(value=cliente[5] or "")
         self.bairro_var = tk.StringVar(value=cliente[6] or "")
+        self.cep_var = tk.StringVar(value=cliente[7] or "")
+        self.numero_var = tk.StringVar(value=cliente[8] or "")
 
         self.cpf_var.trace_add("write", self._limitar_cpf)
         self.telefone_var.trace_add("write", self._limitar_telefone)
+        self.cep_var.trace_add("write", self._limitar_cep)
 
         for var in (
             self.nome_var,
             self.cidade_var,
             self.endereco_var,
             self.bairro_var,
+            self.numero_var,
         ):
             var.trace_add("write", lambda *args, v=var: self._maiusculo_var(v))
 
@@ -1576,6 +1605,8 @@ class EditClientDataDialog(tk.Toplevel):
             ("Cidade:", self.cidade_var),
             ("Endereço:", self.endereco_var),
             ("Bairro:", self.bairro_var),
+            ("CEP:", self.cep_var),
+            ("Número:", self.numero_var),
         ]
 
         for i, (label, var) in enumerate(campos, start=1):
@@ -1635,6 +1666,11 @@ class EditClientDataDialog(tk.Toplevel):
         if self.telefone_var.get() != texto:
             self.telefone_var.set(texto)
 
+    def _limitar_cep(self, *args):
+        texto = "".join(ch for ch in self.cep_var.get() if ch.isdigit())[:8]
+        if self.cep_var.get() != texto:
+            self.cep_var.set(texto)
+
     def _maiusculo_var(self, var):
         texto = var.get()
         texto_maiusculo = texto.upper()
@@ -1648,6 +1684,8 @@ class EditClientDataDialog(tk.Toplevel):
         cidade = self.cidade_var.get().strip()
         endereco = self.endereco_var.get().strip()
         bairro = self.bairro_var.get().strip()
+        cep = "".join(ch for ch in self.cep_var.get().strip() if ch.isdigit())
+        numero = self.numero_var.get().strip()
 
         if not cpf:
             messagebox.showwarning("Atenção", "Informe o CPF.")
@@ -1690,7 +1728,7 @@ class EditClientDataDialog(tk.Toplevel):
         cur.execute(
             """
             UPDATE clients
-            SET cpf = ?, name = ?, phone = ?, city = ?, address = ?, district = ?
+            SET cpf = ?, name = ?, phone = ?, city = ?, address = ?, district = ?, cep = ?, number = ?
             WHERE id = ?
             """,
             (
@@ -1700,6 +1738,8 @@ class EditClientDataDialog(tk.Toplevel):
                 cidade,
                 endereco,
                 bairro,
+                cep,
+                numero,
                 self.cliente_id,
             )
         )
