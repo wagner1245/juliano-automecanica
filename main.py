@@ -4983,69 +4983,206 @@ class OrdemServicoFrame(tk.Frame):
         return itens
 
     def _gerar_imagem_visualizacao_os(self):
-        caminho_modelo = self._localizar_modelo_ordem_servico()
-
-        if not caminho_modelo:
-            messagebox.showerror(
-                "Modelo da OS não encontrado",
-                "Coloque a imagem 'Ordem_de_Serviço.png' na mesma pasta do main.py "
-                "ou dentro da pasta assets."
-            )
-            return None
-
         try:
-            imagem = Image.open(caminho_modelo).convert("RGB")
+            largura = 1240
+            altura = 1754
+
+            imagem = Image.new("RGB", (largura, altura), "white")
             draw = ImageDraw.Draw(imagem)
 
-            fonte_campo = self._fonte_os(24, negrito=True)
-            fonte_campo_menor = self._fonte_os(21, negrito=True)
-            fonte_item = self._fonte_os(22, negrito=False)
-            fonte_item_negrito = self._fonte_os(22, negrito=True)
-            fonte_total = self._fonte_os(25, negrito=True)
+            preto = "#000000"
+            vermelho = "#e11d1d"
+            verde = "#22c55e"
+            cinza_linha = "#111111"
 
+            fonte_logo = self._fonte_os(82, negrito=False)
+            fonte_logo_sub = self._fonte_os(34, negrito=True)
+            fonte_servicos = self._fonte_os(24, negrito=False)
+            fonte_endereco = self._fonte_os(21, negrito=False)
+            fonte_label = self._fonte_os(20, negrito=True)
+            fonte_campo = self._fonte_os(21, negrito=True)
+            fonte_tabela_cab = self._fonte_os(24, negrito=True)
+            fonte_item = self._fonte_os(20, negrito=False)
+            fonte_item_negrito = self._fonte_os(20, negrito=True)
+            fonte_total = self._fonte_os(22, negrito=True)
+            fonte_ass = self._fonte_os(20, negrito=True)
+            fonte_pequena = self._fonte_os(17, negrito=True)
+
+            margem = 24
+            direita = largura - margem
+
+            # CABEÇALHO
+            try:
+                logo = Image.open(LOGO_PATH).convert("RGBA")
+                logo.thumbnail((170, 170), Image.LANCZOS)
+                imagem.paste(logo, (45, 55), logo)
+            except Exception:
+                draw.ellipse((45, 55, 205, 215), outline=vermelho, width=10)
+                draw.ellipse((70, 80, 180, 190), fill="#111111")
+                draw.text((125, 112), "JULIANO", fill="white", font=fonte_pequena, anchor="mm")
+                draw.text((125, 153), "AUTO\nMECÂNICA", fill="white", font=fonte_pequena, anchor="mm")
+
+            draw.text((610, 95), "J U L I A N O", fill=preto, font=fonte_logo, anchor="mm")
+            draw.line((275, 190, 405, 190), fill=vermelho, width=5)
+            draw.text((610, 190), "AUTOMECÂNICA", fill=preto, font=fonte_logo_sub, anchor="mm")
+            draw.line((805, 190, 935, 190), fill=vermelho, width=5)
+
+            servicos = [
+                ("Injeção", "Suspensão"),
+                ("Cabeçote", "Câmbio"),
+                ("Higienização de Ar", ""),
+                ("Revisão", "Freio", "Motor"),
+                ("Embreagem", "Direção"),
+            ]
+            y_serv = 65
+            for linha in servicos:
+                if len(linha) == 2:
+                    texto = f"{linha[0]}  •  {linha[1]}" if linha[1] else linha[0]
+                else:
+                    texto = f"{linha[0]}  •  {linha[1]}  •  {linha[2]}"
+                draw.text((1110, y_serv), texto, fill=preto, font=fonte_servicos, anchor="mm")
+                y_serv += 34
+
+            draw.text(
+                (610, 275),
+                "Rua Clemente Cunha Ferreira, 984 – Vila Perracine – Poá-SP  /  (11) 99357-7993",
+                fill=preto,
+                font=fonte_endereco,
+                anchor="mm",
+            )
+            draw.ellipse((1048, 262, 1068, 282), fill=verde)
+            draw.text((1058, 272), "☎", fill="white", font=self._fonte_os(13, negrito=True), anchor="mm")
+            draw.line((margem, 312, direita, 312), fill=preto, width=5)
+
+            # DATA / ORÇADO POR
             data_atual = datetime.now().strftime("%d/%m/%Y")
+            dia, mes, ano = data_atual.split("/")
+            y_data = 355
+
+            draw.text((42, y_data), "Data da Ordem de serviço:", fill=preto, font=fonte_label)
+            draw.text((350, y_data), dia, fill=preto, font=fonte_campo)
+            draw.line((340, y_data + 27, 390, y_data + 27), fill=preto, width=2)
+            draw.text((410, y_data), "/", fill=preto, font=fonte_label)
+            draw.text((440, y_data), mes, fill=preto, font=fonte_campo)
+            draw.line((430, y_data + 27, 480, y_data + 27), fill=preto, width=2)
+            draw.text((500, y_data), "/", fill=preto, font=fonte_label)
+            draw.text((530, y_data), ano, fill=preto, font=fonte_campo)
+            draw.line((520, y_data + 27, 630, y_data + 27), fill=preto, width=2)
+
+            draw.text((655, y_data), "Orçado por:", fill=preto, font=fonte_label)
+            draw.text((790, y_data), "JULIANO", fill=preto, font=fonte_campo)
+            draw.line((790, y_data + 27, direita - 10, y_data + 27), fill=preto, width=2)
+
+            # DADOS DO CLIENTE
+            box_top = 410
+            box_bottom = 620
+            draw.rectangle((margem, box_top, direita, box_bottom), outline=preto, width=2)
+
+            def linha_campo(label, valor, label_x, linha_x1, linha_x2, y, max_texto):
+                draw.text((label_x, y), label, fill=preto, font=fonte_label)
+                draw.line((linha_x1, y + 27, linha_x2, y + 27), fill=preto, width=1)
+                self._desenhar_texto_os(
+                    draw,
+                    (linha_x1 + 8, y - 3),
+                    self._texto_limpo_os(valor),
+                    fonte_campo,
+                    largura_maxima=max_texto,
+                )
+
+            linha_campo("CPF:", self.os_cpf_var.get(), 42, 115, 420, 438, 290)
+            linha_campo("Bairro:", self.os_bairro_var.get(), 462, 545, 750, 438, 195)
+            linha_campo("Quilometragem:", self.os_km_var.get(), 775, 950, 1210, 438, 245)
+
+            linha_campo("Cliente:", self.os_nome_var.get(), 42, 130, 430, 505, 285)
+            linha_campo("Cidade:", self.os_cidade_var.get(), 462, 555, 750, 505, 185)
+            linha_campo("Carro:", self.os_veiculo_var.get(), 775, 850, 1008, 505, 150)
+            linha_campo("Cor:", self.os_cor_var.get(), 1035, 1085, 1210, 505, 115)
+
+            linha_campo("Endereço:", self.os_endereco_var.get(), 42, 155, 438, 572, 270)
+            linha_campo("Telefone:", self.os_telefone_var.get(), 462, 570, 750, 572, 170)
+            linha_campo("Placa:", self.os_placa_var.get(), 775, 850, 1015, 572, 155)
+            linha_campo("Ano:", self.os_ano_var.get(), 1035, 1095, 1210, 572, 105)
+
+            # TABELA DE ITENS
+            tabela_top = 640
+            tabela_bottom = 1468
+            qtd_x = 230
+            valor_x = 1010
+            cab_bottom = 692
+
+            draw.rectangle((margem, tabela_top, direita, tabela_bottom), outline=preto, width=2)
+            draw.line((qtd_x, tabela_top, qtd_x, tabela_bottom), fill=preto, width=2)
+            draw.line((valor_x, tabela_top, valor_x, tabela_bottom), fill=preto, width=2)
+            draw.line((margem, cab_bottom, direita, cab_bottom), fill=preto, width=2)
+
+            draw.text(((margem + qtd_x) // 2, 666), "QUANTIDADE", fill=preto, font=fonte_tabela_cab, anchor="mm")
+            draw.text(((qtd_x + valor_x) // 2, 666), "DESCRIÇÃO", fill=preto, font=fonte_tabela_cab, anchor="mm")
+            draw.text(((valor_x + direita) // 2, 666), "VALOR", fill=preto, font=fonte_tabela_cab, anchor="mm")
+
+            linhas = 19
+            altura_linha = (tabela_bottom - cab_bottom) // linhas
+            for i in range(1, linhas + 1):
+                y = cab_bottom + i * altura_linha
+                draw.line((margem, y, direita, y), fill=cinza_linha, width=1)
+
             itens = self._coletar_itens_visualizacao_os()
+            y_item = cab_bottom + 18
+            for quantidade, descricao, valor in itens[:linhas]:
+                self._desenhar_texto_os(
+                    draw,
+                    ((margem + qtd_x) // 2, y_item + 7),
+                    quantidade,
+                    fonte_item_negrito,
+                    largura_maxima=150,
+                    anchor="mm",
+                )
+                self._desenhar_texto_os(
+                    draw,
+                    (qtd_x + 18, y_item - 6),
+                    descricao,
+                    fonte_item,
+                    largura_maxima=720,
+                )
+                self._desenhar_texto_os(
+                    draw,
+                    ((valor_x + direita) // 2, y_item + 7),
+                    valor,
+                    fonte_item_negrito,
+                    largura_maxima=185,
+                    anchor="mm",
+                )
+                y_item += altura_linha
 
-            # Dados superiores da Ordem de Serviço.
-            dia_os, mes_os, ano_os = data_atual.split("/")
-            self._desenhar_texto_os(draw, (285, 282), dia_os, fonte_campo_menor, largura_maxima=45)
-            self._desenhar_texto_os(draw, (345, 282), mes_os, fonte_campo_menor, largura_maxima=45)
-            self._desenhar_texto_os(draw, (405, 282), ano_os, fonte_campo_menor, largura_maxima=85)
-            self._desenhar_texto_os(draw, (700, 282), "JULIANO", fonte_campo, largura_maxima=260)
+            # TOTAIS
+            total_top = 1488
+            total_bottom = 1628
+            total_left = margem
+            total_right = direita
+            total_label_x = 735
+            total_value_x = 985
 
-            self._desenhar_texto_os(draw, (150, 352), self._texto_limpo_os(self.os_cpf_var.get()), fonte_campo_menor, largura_maxima=220)
-            self._desenhar_texto_os(draw, (470, 352), self._texto_limpo_os(self.os_bairro_var.get()), fonte_campo_menor, largura_maxima=260)
-            self._desenhar_texto_os(draw, (855, 352), self._texto_limpo_os(self.os_km_var.get()), fonte_campo_menor, largura_maxima=150)
+            draw.rectangle((total_left, total_top, total_right, total_bottom), outline=preto, width=2)
+            draw.line((total_left, total_top + 58, total_label_x, total_top + 58), fill=preto, width=2)
+            draw.line((total_label_x, total_top + 58, total_label_x, total_bottom), fill=preto, width=2)
+            draw.line((total_value_x, total_top, total_value_x, total_bottom), fill=preto, width=2)
 
-            self._desenhar_texto_os(draw, (138, 454), self._texto_limpo_os(self.os_nome_var.get()), fonte_campo_menor, largura_maxima=285)
-            self._desenhar_texto_os(draw, (390, 454), self._texto_limpo_os(self.os_cidade_var.get()), fonte_campo_menor, largura_maxima=220)
-            self._desenhar_texto_os(draw, (650, 454), self._texto_limpo_os(self.os_veiculo_var.get()), fonte_campo_menor, largura_maxima=230)
-            self._desenhar_texto_os(draw, (965, 454), self._texto_limpo_os(self.os_cor_var.get()), fonte_campo_menor, largura_maxima=70)
-
-            self._desenhar_texto_os(draw, (170, 502), self._texto_limpo_os(self.os_endereco_var.get()), fonte_campo_menor, largura_maxima=280)
-            self._desenhar_texto_os(draw, (470, 502), self._texto_limpo_os(self.os_telefone_var.get()), fonte_campo_menor, largura_maxima=185)
-            self._desenhar_texto_os(draw, (700, 502), self._texto_limpo_os(self.os_placa_var.get()), fonte_campo_menor, largura_maxima=150)
-            self._desenhar_texto_os(draw, (958, 502), self._texto_limpo_os(self.os_ano_var.get()), fonte_campo_menor, largura_maxima=80)
-
-            # Itens da tabela.
-            y = 595
-            altura_linha = 36
-            max_itens = 17
-
-            for quantidade, descricao, valor in itens[:max_itens]:
-                self._desenhar_texto_os(draw, (145, y), quantidade, fonte_item_negrito, largura_maxima=90, anchor="mm")
-                self._desenhar_texto_os(draw, (255, y - 12), descricao, fonte_item, largura_maxima=520)
-                self._desenhar_texto_os(draw, (930, y), valor, fonte_item_negrito, largura_maxima=130, anchor="mm")
-                y += altura_linha
-
-            # Totais.
             mao_obra = self._formatar_moeda_os(self._valor_para_float_os(self.mao_obra_os_var.get()))
             total_pecas = self.os_total_pecas_var.get()
             total_geral = self.os_total_geral_var.get()
 
-            self._desenhar_texto_os(draw, (275, 1242), mao_obra, fonte_total, largura_maxima=170)
-            self._desenhar_texto_os(draw, (275, 1290), total_pecas, fonte_total, largura_maxima=170)
-            self._desenhar_texto_os(draw, (785, 1328), total_geral, self._fonte_os(33, negrito=True), largura_maxima=210, anchor="mm")
+            draw.text((42, total_top + 25), "Mão de Obra:", fill=preto, font=fonte_total)
+            draw.text((205, total_top + 25), mao_obra, fill=preto, font=fonte_total)
+
+            draw.text((42, total_top + 88), "Total de Peças:", fill=preto, font=fonte_total)
+            draw.text((220, total_top + 88), total_pecas, fill=preto, font=fonte_total)
+
+            draw.text((755, total_top + 92), "TOTAL DO SERVIÇO:", fill=preto, font=self._fonte_os(24, negrito=True))
+            draw.text((1110, total_top + 92), total_geral, fill=preto, font=self._fonte_os(24, negrito=True), anchor="mm")
+
+            # ASSINATURA
+            y_ass = 1698
+            draw.text((32, y_ass), "Assinatura do Cliente:", fill=preto, font=fonte_ass)
+            draw.line((265, y_ass + 25, 970, y_ass + 25), fill=preto, width=2)
 
             return imagem
 
