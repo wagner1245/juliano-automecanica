@@ -5089,8 +5089,8 @@ class OrdemServicoFrame(tk.Frame):
                     largura_maxima=max_texto,
                 )
 
-            linha_campo("CPF:", self.os_cpf_var.get(), 42, 115, 420, 438, 290)
-            linha_campo("Bairro:", self.os_bairro_var.get(), 462, 545, 750, 438, 195)
+            linha_campo("CPF:", self.os_cpf_var.get(), 42, 115, 315, 438, 190)
+            linha_campo("Bairro:", self.os_bairro_var.get(), 330, 410, 650, 438, 225)
             linha_campo("Quilometragem:", self.os_km_var.get(), 775, 950, 1210, 438, 245)
 
             linha_campo("Cliente:", self.os_nome_var.get(), 42, 130, 430, 505, 285)
