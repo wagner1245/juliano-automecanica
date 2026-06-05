@@ -4998,9 +4998,9 @@ class OrdemServicoFrame(tk.Frame):
             fonte_logo = self._fonte_os(82, negrito=False)
             fonte_logo_sub = self._fonte_os(34, negrito=True)
             fonte_servicos = self._fonte_os(24, negrito=False)
-            fonte_endereco = self._fonte_os(21, negrito=False)
-            fonte_label = self._fonte_os(20, negrito=True)
-            fonte_campo = self._fonte_os(21, negrito=True)
+            fonte_endereco = self._fonte_os(26, negrito=False)
+            fonte_label = self._fonte_os(26, negrito=True)
+            fonte_campo = self._fonte_os(26, negrito=True)
             fonte_tabela_cab = self._fonte_os(24, negrito=True)
             fonte_item = self._fonte_os(20, negrito=False)
             fonte_item_negrito = self._fonte_os(20, negrito=True)
@@ -5050,8 +5050,8 @@ class OrdemServicoFrame(tk.Frame):
                 font=fonte_endereco,
                 anchor="mm",
             )
-            draw.ellipse((1048, 262, 1068, 282), fill=verde)
-            draw.text((1058, 272), "☎", fill="white", font=self._fonte_os(13, negrito=True), anchor="mm")
+            #draw.ellipse((1065, 262, 1068, 282), fill=verde)
+            #draw.text((1058, 272), "☎", fill="white", font=self._fonte_os(13, negrito=True), anchor="mm")
             draw.line((margem, 312, direita, 312), fill=preto, width=5)
 
             # DATA / ORÇADO POR
@@ -5059,19 +5059,15 @@ class OrdemServicoFrame(tk.Frame):
             dia, mes, ano = data_atual.split("/")
             y_data = 355
 
-            draw.text((42, y_data), "Data da Ordem de serviço:", fill=preto, font=fonte_label)
-            draw.text((350, y_data), dia, fill=preto, font=fonte_campo)
-            draw.line((340, y_data + 27, 390, y_data + 27), fill=preto, width=2)
-            draw.text((410, y_data), "/", fill=preto, font=fonte_label)
-            draw.text((440, y_data), mes, fill=preto, font=fonte_campo)
-            draw.line((430, y_data + 27, 480, y_data + 27), fill=preto, width=2)
-            draw.text((500, y_data), "/", fill=preto, font=fonte_label)
-            draw.text((530, y_data), ano, fill=preto, font=fonte_campo)
-            draw.line((520, y_data + 27, 630, y_data + 27), fill=preto, width=2)
+            draw.text((145, y_data), "Data da Ordem de Serviço:", fill=preto, font=fonte_label)
+            draw.text((480, y_data), dia, fill=preto, font=fonte_campo)
+            draw.text((523, y_data), "/", fill=preto, font=fonte_label)
+            draw.text((545, y_data), mes, fill=preto, font=fonte_campo)
+            draw.text((588, y_data), "/", fill=preto, font=fonte_label)
+            draw.text((610, y_data), ano, fill=preto, font=fonte_campo)
 
-            draw.text((655, y_data), "Orçado por:", fill=preto, font=fonte_label)
-            draw.text((790, y_data), "JULIANO", fill=preto, font=fonte_campo)
-            draw.line((790, y_data + 27, direita - 10, y_data + 27), fill=preto, width=2)
+            draw.text((720, y_data), "Orçado Por:", fill=preto, font=fonte_label)
+            draw.text((880, y_data), "JULIANO", fill=preto, font=fonte_campo)
 
             # DADOS DO CLIENTE
             box_top = 410
@@ -5089,8 +5085,8 @@ class OrdemServicoFrame(tk.Frame):
                     largura_maxima=max_texto,
                 )
 
-            linha_campo("CPF:", self.os_cpf_var.get(), 42, 115, 315, 438, 190)
-            linha_campo("Bairro:", self.os_bairro_var.get(), 330, 410, 650, 438, 225)
+            linha_campo("CPF:", self.os_cpf_var.get(), 42, 115, 420, 438, 290)
+            linha_campo("Bairro:", self.os_bairro_var.get(), 462, 545, 750, 438, 195)
             linha_campo("Quilometragem:", self.os_km_var.get(), 775, 950, 1210, 438, 245)
 
             linha_campo("Cliente:", self.os_nome_var.get(), 42, 130, 430, 505, 285)
