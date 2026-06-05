@@ -5112,7 +5112,7 @@ class OrdemServicoFrame(tk.Frame):
                     largura_maxima=max_texto,
                 )
             linha_campo("Cliente:", self.os_nome_var.get(), 42, 140, 520, 440, 285)
-            linha_campo("Bairro:", self.os_bairro_var.get(), 462, 545, 750, 438, 195)
+            linha_campo("Telefone:", self.os_telefone_var.get(), 462, 575, 750, 438, 195)
             linha_campo("Quilometragem:", self.os_km_var.get(), 775, 950, 1210, 438, 245)
 
             linha_campo("Cidade:", self.os_cidade_var.get(), 462, 555, 750, 505, 185)
@@ -5120,7 +5120,7 @@ class OrdemServicoFrame(tk.Frame):
             linha_campo("Cor:", self.os_cor_var.get(), 1035, 1085, 1210, 505, 115)
 
             linha_campo("Endereço:", self.os_endereco_var.get(), 42, 155, 438, 572, 270)
-            linha_campo("Telefone:", self.os_telefone_var.get(), 462, 570, 750, 572, 170)
+            linha_campo("Bairro:", self.os_bairro_var.get(), 462, 570, 750, 572, 170)
             linha_campo("Placa:", self.os_placa_var.get(), 775, 850, 1015, 572, 155)
             linha_campo("Ano:", self.os_ano_var.get(), 1035, 1095, 1210, 572, 105)
 
