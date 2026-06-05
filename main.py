@@ -4958,6 +4958,25 @@ class OrdemServicoFrame(tk.Frame):
 
         return ""
 
+
+    def _abreviar_nome_os(self, nome):
+        nome = str(nome or "").strip().upper()
+
+        partes = nome.split()
+
+        if len(partes) < 3:
+            return nome
+
+        primeiro = partes[0]
+        ultimo = partes[-1]
+
+        meio = []
+        for parte in partes[1:-1]:
+            if len(parte) > 2:
+                meio.append(parte[0])
+
+        return f"{primeiro} {' '.join(meio)} {ultimo}".strip()
+
     def _desenhar_texto_os(self, draw, xy, texto, fonte, largura_maxima=None, anchor=None):
         texto = str(texto or "").strip()
 
@@ -5076,20 +5095,26 @@ class OrdemServicoFrame(tk.Frame):
 
             def linha_campo(label, valor, label_x, linha_x1, linha_x2, y, max_texto):
                 draw.text((label_x, y), label, fill=preto, font=fonte_label)
-                draw.line((linha_x1, y + 27, linha_x2, y + 27), fill=preto, width=1)
+
+                valor_formatado = self._texto_limpo_os(valor)
+
+                if label == "Cliente:":
+                    largura_texto = draw.textbbox((0, 0), valor_formatado, font=fonte_campo)[2]
+
+                    if largura_texto > max_texto:
+                        valor_formatado = self._abreviar_nome_os(valor_formatado)
+
                 self._desenhar_texto_os(
                     draw,
-                    (linha_x1 + 8, y - 3),
-                    self._texto_limpo_os(valor),
+                    (linha_x1 + 8, y - 0),
+                    valor_formatado,
                     fonte_campo,
                     largura_maxima=max_texto,
                 )
-
-            linha_campo("CPF:", self.os_cpf_var.get(), 42, 115, 420, 438, 290)
+            linha_campo("Cliente:", self.os_nome_var.get(), 42, 140, 520, 440, 285)
             linha_campo("Bairro:", self.os_bairro_var.get(), 462, 545, 750, 438, 195)
             linha_campo("Quilometragem:", self.os_km_var.get(), 775, 950, 1210, 438, 245)
 
-            linha_campo("Cliente:", self.os_nome_var.get(), 42, 130, 430, 505, 285)
             linha_campo("Cidade:", self.os_cidade_var.get(), 462, 555, 750, 505, 185)
             linha_campo("Carro:", self.os_veiculo_var.get(), 775, 850, 1008, 505, 150)
             linha_campo("Cor:", self.os_cor_var.get(), 1035, 1085, 1210, 505, 115)
