@@ -5122,7 +5122,7 @@ class OrdemServicoFrame(tk.Frame):
             linha_campo("Endereço:", self.os_endereco_var.get(), 42, 155, 438, 572, 270)
             linha_campo("Bairro:", self.os_bairro_var.get(), 462, 570, 750, 572, 170)
             linha_campo("Placa:", self.os_placa_var.get(), 775, 850, 1015, 572, 155)
-            linha_campo("Ano:", self.os_ano_var.get(), 1035, 1095, 1210, 572, 105)
+            linha_campo("Ano:", self.os_ano_var.get(), 1060, 1120, 1210, 438, 105)
 
             # TABELA DE ITENS
             tabela_top = 640
