@@ -5044,42 +5044,105 @@ class OrdemServicoFrame(tk.Frame):
             return ""
 
         substituicoes = {
-            "AVENIDA": "AV",
-            "AV.": "AV",
-            "RUA": "R",
-            "TRAVESSA": "TV",
-            "ESTRADA": "EST",
-            "RODOVIA": "ROD",
-            "ALAMEDA": "AL",
-            "PRAÇA": "PÇA",
-            "PRACA": "PÇA",
-            "PROFESSOR": "PROF",
-            "PROFESSORA": "PROFA",
-            "DOUTOR": "DR",
-            "DOUTORA": "DRA",
-            "SENHOR": "SR",
-            "SENHORA": "SRA",
+            "AVENIDA": "AV.",
+            "AV.": "AV.",
+            "RUA": "R.",
+            "R.": "R.",
+            "TRAVESSA": "TV.",
+            "TV.": "TV.",
+            "ESTRADA": "EST.",
+            "EST.": "EST.",
+            "RODOVIA": "ROD.",
+            "ROD.": "ROD.",
+            "ALAMEDA": "AL.",
+            "AL.": "AL.",
+            "PRAÇA": "PÇA.",
+            "PRACA": "PÇA.",
+            "PROFESSOR": "PROF.",
+            "PROFESSORA": "PROFA.",
+            "DOUTOR": "DR.",
+            "DOUTORA": "DRA.",
+            "SENHOR": "SR.",
+            "SENHORA": "SRA.",
         }
 
         ignorar = {"DE", "DA", "DO", "DAS", "DOS", "E"}
         partes = [substituicoes.get(parte, parte) for parte in texto.replace("-", " - ").split()]
-        partes_sem_ignorar = [parte for parte in partes if parte not in ignorar]
+        partes = [parte for parte in partes if parte not in ignorar]
 
-        if len(partes_sem_ignorar) <= 2:
-            return " ".join(partes_sem_ignorar)
+        if len(partes) < 3:
+            return " ".join(partes)
 
-        primeiro = partes_sem_ignorar[0]
-        ultimo = partes_sem_ignorar[-1]
+        primeiro = partes[0]
+        ultimo = partes[-1]
         meio = []
 
-        for parte in partes_sem_ignorar[1:-1]:
+        for parte in partes[1:-1]:
             if parte == "-":
                 continue
-            if len(parte) > 2:
+            if len(parte) > 1:
                 meio.append(parte[0])
 
         return f"{primeiro} {' '.join(meio)} {ultimo}".strip()
 
+    def _largura_texto_os(self, texto, fonte):
+        texto = str(texto or "")
+
+        if hasattr(fonte, "getlength"):
+            return fonte.getlength(texto)
+
+        bbox = fonte.getbbox(texto)
+        return bbox[2] - bbox[0]
+
+    def _abreviar_para_caber_os(self, texto, fonte, largura_maxima, tipo="texto"):
+        texto = self._texto_limpo_os(texto)
+
+        if not texto:
+            return ""
+
+        if self._largura_texto_os(texto, fonte) <= largura_maxima:
+            return texto
+
+        if tipo == "cliente":
+            abreviado = self._abreviar_nome_os(texto)
+        elif tipo == "endereco":
+            abreviado = self._abreviar_endereco_os(texto)
+        else:
+            abreviado = self._abreviar_texto_campo_os(texto)
+
+        if self._largura_texto_os(abreviado, fonte) <= largura_maxima:
+            return abreviado
+
+        partes = abreviado.split()
+
+        if len(partes) >= 2:
+            primeiro = partes[0]
+            ultimo = partes[-1]
+            meio = partes[1:-1]
+
+            # Primeiro tenta manter o primeiro nome e encurtar o último com ponto.
+            for tamanho in range(len(ultimo), 1, -1):
+                tentativa = " ".join([primeiro] + meio + [ultimo[:tamanho] + "."]).strip()
+
+                if self._largura_texto_os(tentativa, fonte) <= largura_maxima:
+                    return tentativa
+
+            # Depois tenta só primeiro + inicial do último.
+            tentativa = f"{primeiro} {ultimo[0]}.".strip()
+            if self._largura_texto_os(tentativa, fonte) <= largura_maxima:
+                return tentativa
+
+        # Último recurso: corta com ponto, sem usar "..."
+        texto_base = abreviado
+        while texto_base:
+            tentativa = texto_base[:-1].rstrip() + "."
+
+            if self._largura_texto_os(tentativa, fonte) <= largura_maxima:
+                return tentativa
+
+            texto_base = texto_base[:-1].rstrip()
+
+        return ""
     def _desenhar_texto_os(self, draw, xy, texto, fonte, largura_maxima=None, anchor=None):
         texto = str(texto or "").strip()
 
@@ -5191,62 +5254,74 @@ class OrdemServicoFrame(tk.Frame):
             draw.text((720, y_data), "Orçado Por:", fill=preto, font=fonte_label)
             draw.text((880, y_data), "JULIANO", fill=preto, font=fonte_campo)
 
-            # DADOS DO CLIENTE
+            # DADOS DO CLIENTE / VEÍCULO EM DUAS COLUNAS
             box_top = 410
-            box_bottom = 620
+            box_bottom = 665
+            meio_x = 610
             draw.rectangle((margem, box_top, direita, box_bottom), outline=preto, width=2)
+            draw.line((meio_x, box_top, meio_x, box_bottom), fill=preto, width=2)
 
-            def linha_campo(label, valor, label_x, linha_x1, linha_x2, y, max_texto):
+            def linha_campo(label, valor, label_x, valor_x, linha_x2, y, max_texto, tipo=None):
                 draw.text((label_x, y), label, fill=preto, font=fonte_label)
 
-                valor_formatado = self._texto_limpo_os(valor)
-
-                campos_com_abreviacao = {"Cliente:", "Endereço:", "Bairro:", "Cidade:", "Carro:", "Cor:"}
-
-                if label in campos_com_abreviacao:
-                    largura_texto = draw.textbbox((0, 0), valor_formatado, font=fonte_campo)[2]
-
-                    if largura_texto > max_texto:
-                        if label == "Cliente:":
-                            valor_formatado = self._abreviar_nome_os(valor_formatado)
-                        elif label == "Endereço:":
-                            valor_formatado = self._abreviar_endereco_os(valor_formatado)
-                        else:
-                            valor_formatado = self._abreviar_texto_campo_os(valor_formatado)
+                if tipo:
+                    valor_formatado = self._abreviar_para_caber_os(
+                        valor,
+                        fonte_campo,
+                        max_texto,
+                        tipo=tipo,
+                    )
+                else:
+                    valor_formatado = self._texto_limpo_os(valor)
 
                 self._desenhar_texto_os(
                     draw,
-                    (linha_x1 + 8, y - 0),
+                    (valor_x, y - 0),
                     valor_formatado,
                     fonte_campo,
                     largura_maxima=max_texto,
                 )
-            linha_campo("Cliente:", self.os_nome_var.get(), 42, 140, 520, 440, 285)
-            linha_campo("Telefone:", self.os_telefone_var.get(), 462, 575, 750, 438, 195)
 
-            linha_campo("Cidade:", self.os_cidade_var.get(), 462, 555, 750, 505, 185)
-            linha_campo("Carro:", self.os_veiculo_var.get(), 775, 850, 1008, 505, 150)
-            linha_campo("Cor:", self.os_cor_var.get(), 800, 860, 1040, 438, 180)
-            linha_campo("Endereço:", self.os_endereco_var.get(), 42, 165, 438, 505, 270)
-            linha_campo("Bairro:", self.os_bairro_var.get(), 42, 125, 750, 572, 170)
-            linha_campo("Placa:", self.os_placa_var.get(), 775, 850, 1015, 572, 155)
-            linha_campo("Ano:", self.os_ano_var.get(), 1060, 1120, 1210, 438, 105)
+                # Linha pontilhada decorativa abaixo de cada campo,
+                # igual ao modelo em duas colunas.
+                y_linha = y + 35
+                x_ini = label_x
+                x_fim = linha_x2
+                dash = 8
+                gap = 5
+                x = x_ini
+                while x < x_fim:
+                    draw.line((x, y_linha, min(x + dash, x_fim), y_linha), fill="#9ca3af", width=1)
+                    x += dash + gap
+
+            # Coluna esquerda: dados do cliente
+            linha_campo("Cliente:", self.os_nome_var.get(), 42, 160, 560, 440, 360, tipo="cliente")
+            linha_campo("Endereço:", self.os_endereco_var.get(), 42, 170, 560, 490, 360, tipo="endereco")
+            linha_campo("Cidade:", self.os_cidade_var.get(), 42, 160, 560, 540, 360)
+            linha_campo("Bairro:", self.os_bairro_var.get(), 42, 160, 560, 590, 360)
+
+            # Coluna direita: dados do veículo
+            linha_campo("Carro:", self.os_veiculo_var.get(), 650, 760, 1180, 440, 400)
+            linha_campo("Cor:", self.os_cor_var.get(), 650, 760, 1180, 482, 400)
+            linha_campo("Ano:", self.os_ano_var.get(), 650, 760, 1180, 524, 400)
+            linha_campo("Placa:", self.os_placa_var.get(), 650, 760, 1180, 566, 400)
+            linha_campo("Telefone:", self.os_telefone_var.get(), 650, 800, 1180, 608, 360)
 
             # TABELA DE ITENS
-            tabela_top = 640
+            tabela_top = 690
             tabela_bottom = 1468
             qtd_x = 230
             valor_x = 1010
-            cab_bottom = 692
+            cab_bottom = 742
 
             draw.rectangle((margem, tabela_top, direita, tabela_bottom), outline=preto, width=2)
             draw.line((qtd_x, tabela_top, qtd_x, tabela_bottom), fill=preto, width=2)
             draw.line((valor_x, tabela_top, valor_x, tabela_bottom), fill=preto, width=2)
             draw.line((margem, cab_bottom, direita, cab_bottom), fill=preto, width=2)
 
-            draw.text(((margem + qtd_x) // 2, 666), "QUANTIDADE", fill=preto, font=fonte_tabela_cab, anchor="mm")
-            draw.text(((qtd_x + valor_x) // 2, 666), "DESCRIÇÃO", fill=preto, font=fonte_tabela_cab, anchor="mm")
-            draw.text(((valor_x + direita) // 2, 666), "VALOR", fill=preto, font=fonte_tabela_cab, anchor="mm")
+            draw.text(((margem + qtd_x) // 2, 716), "QUANTIDADE", fill=preto, font=fonte_tabela_cab, anchor="mm")
+            draw.text(((qtd_x + valor_x) // 2, 716), "DESCRIÇÃO", fill=preto, font=fonte_tabela_cab, anchor="mm")
+            draw.text(((valor_x + direita) // 2, 716), "VALOR", fill=preto, font=fonte_tabela_cab, anchor="mm")
 
             linhas = 19
             altura_linha = (tabela_bottom - cab_bottom) // linhas
