@@ -5264,22 +5264,26 @@ class OrdemServicoFrame(tk.Frame):
             def linha_campo(label, valor, label_x, valor_x, linha_x2, y, max_texto, tipo=None):
                 draw.text((label_x, y), label, fill=preto, font=fonte_label)
 
-                if tipo:
+                # Apenas o campo Cliente usa abreviação automática.
+                # Os demais campos são exibidos completos, sem encurtar com reticências.
+                if tipo == "cliente":
                     valor_formatado = self._abreviar_para_caber_os(
                         valor,
                         fonte_campo,
                         max_texto,
                         tipo=tipo,
                     )
+                    largura_limite = max_texto
                 else:
                     valor_formatado = self._texto_limpo_os(valor)
+                    largura_limite = None
 
                 self._desenhar_texto_os(
                     draw,
                     (valor_x, y - 0),
                     valor_formatado,
                     fonte_campo,
-                    largura_maxima=max_texto,
+                    largura_maxima=largura_limite,
                 )
 
                 # Linha pontilhada decorativa abaixo de cada campo,
@@ -5296,7 +5300,7 @@ class OrdemServicoFrame(tk.Frame):
 
             # Coluna esquerda: dados do cliente
             linha_campo("Cliente:", self.os_nome_var.get(), 42, 160, 560, 440, 360, tipo="cliente")
-            linha_campo("Endereço:", self.os_endereco_var.get(), 42, 170, 560, 490, 360, tipo="endereco")
+            linha_campo("Endereço:", self.os_endereco_var.get(), 42, 170, 560, 490, 360)
             linha_campo("Cidade:", self.os_cidade_var.get(), 42, 160, 560, 540, 360)
             linha_campo("Bairro:", self.os_bairro_var.get(), 42, 160, 560, 590, 360)
 
@@ -5305,6 +5309,7 @@ class OrdemServicoFrame(tk.Frame):
             linha_campo("Cor:", self.os_cor_var.get(), 650, 760, 1180, 482, 400)
             linha_campo("Ano:", self.os_ano_var.get(), 650, 760, 1180, 524, 400)
             linha_campo("Placa:", self.os_placa_var.get(), 650, 760, 1180, 566, 400)
+            linha_campo("Quilometragem:", self.os_km_var.get(), 650, 880, 1180, 608, 280)
             linha_campo("Telefone:", self.os_telefone_var.get(), 42, 165, 520, 640, 220)
 
             # TABELA DE ITENS
