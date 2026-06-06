@@ -5264,8 +5264,9 @@ class OrdemServicoFrame(tk.Frame):
             def linha_campo(label, valor, label_x, valor_x, linha_x2, y, max_texto, tipo=None):
                 draw.text((label_x, y), label, fill=preto, font=fonte_label)
 
-                # Apenas o campo Cliente usa abreviação automática.
-                # Os demais campos são exibidos completos, sem encurtar com reticências.
+                # Cliente continua usando a abreviação inteligente de nome.
+                # Os outros campos NÃO abreviam palavras; apenas cortam no limite da linha
+                # e adicionam "..." para não invadir a coluna ao lado.
                 if tipo == "cliente":
                     valor_formatado = self._abreviar_para_caber_os(
                         valor,
@@ -5273,17 +5274,15 @@ class OrdemServicoFrame(tk.Frame):
                         max_texto,
                         tipo=tipo,
                     )
-                    largura_limite = max_texto
                 else:
                     valor_formatado = self._texto_limpo_os(valor)
-                    largura_limite = None
 
                 self._desenhar_texto_os(
                     draw,
                     (valor_x, y - 0),
                     valor_formatado,
                     fonte_campo,
-                    largura_maxima=largura_limite,
+                    largura_maxima=max_texto,
                 )
 
                 # Linha pontilhada decorativa abaixo de cada campo,
