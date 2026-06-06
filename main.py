@@ -5256,7 +5256,7 @@ class OrdemServicoFrame(tk.Frame):
 
             # DADOS DO CLIENTE / VEÍCULO EM DUAS COLUNAS
             box_top = 410
-            box_bottom = 665
+            box_bottom = 690
             meio_x = 610
             draw.rectangle((margem, box_top, direita, box_bottom), outline=preto, width=2)
             draw.line((meio_x, box_top, meio_x, box_bottom), fill=preto, width=2)
@@ -5305,23 +5305,23 @@ class OrdemServicoFrame(tk.Frame):
             linha_campo("Cor:", self.os_cor_var.get(), 650, 760, 1180, 482, 400)
             linha_campo("Ano:", self.os_ano_var.get(), 650, 760, 1180, 524, 400)
             linha_campo("Placa:", self.os_placa_var.get(), 650, 760, 1180, 566, 400)
-            linha_campo("Telefone:", self.os_telefone_var.get(), 650, 800, 1180, 608, 360)
+            linha_campo("Telefone:", self.os_telefone_var.get(), 42, 165, 520, 640, 220)
 
             # TABELA DE ITENS
-            tabela_top = 690
+            tabela_top = 720
             tabela_bottom = 1468
             qtd_x = 230
             valor_x = 1010
-            cab_bottom = 742
+            cab_bottom = 772
 
             draw.rectangle((margem, tabela_top, direita, tabela_bottom), outline=preto, width=2)
             draw.line((qtd_x, tabela_top, qtd_x, tabela_bottom), fill=preto, width=2)
             draw.line((valor_x, tabela_top, valor_x, tabela_bottom), fill=preto, width=2)
             draw.line((margem, cab_bottom, direita, cab_bottom), fill=preto, width=2)
 
-            draw.text(((margem + qtd_x) // 2, 716), "QUANTIDADE", fill=preto, font=fonte_tabela_cab, anchor="mm")
-            draw.text(((qtd_x + valor_x) // 2, 716), "DESCRIÇÃO", fill=preto, font=fonte_tabela_cab, anchor="mm")
-            draw.text(((valor_x + direita) // 2, 716), "VALOR", fill=preto, font=fonte_tabela_cab, anchor="mm")
+            draw.text(((margem + qtd_x) // 2, 746), "QUANTIDADE", fill=preto, font=fonte_tabela_cab, anchor="mm")
+            draw.text(((qtd_x + valor_x) // 2, 746), "DESCRIÇÃO", fill=preto, font=fonte_tabela_cab, anchor="mm")
+            draw.text(((valor_x + direita) // 2, 746), "VALOR", fill=preto, font=fonte_tabela_cab, anchor="mm")
 
             linhas = 19
             altura_linha = (tabela_bottom - cab_bottom) // linhas
