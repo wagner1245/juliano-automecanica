@@ -5225,7 +5225,7 @@ class OrdemServicoFrame(tk.Frame):
                     texto = f"{linha[0]}  •  {linha[1]}" if linha[1] else linha[0]
                 else:
                     texto = f"{linha[0]}  •  {linha[1]}  •  {linha[2]}"
-                draw.text((1110, y_serv), texto, fill=preto, font=fonte_servicos, anchor="mm")
+                draw.text((1085, y_serv), texto, fill=preto, font=fonte_servicos, anchor="mm")
                 y_serv += 34
 
             draw.text(
