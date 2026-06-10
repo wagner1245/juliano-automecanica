@@ -5340,7 +5340,7 @@ class OrdemServicoFrame(tk.Frame):
                     draw,
                     ((margem + qtd_x) // 2, y_item + 7),
                     quantidade,
-                    fonte_item_negrito,
+                    fonte_campo,
                     largura_maxima=150,
                     anchor="mm",
                 )
@@ -5378,8 +5378,8 @@ class OrdemServicoFrame(tk.Frame):
             total_pecas = self.os_total_pecas_var.get()
             total_geral = self.os_total_geral_var.get()
 
-            draw.text((42, total_top + 25), "Mão de Obra:", fill=preto, font=fonte_total)
-            draw.text((205, total_top + 25), mao_obra, fill=preto, font=fonte_total)
+            draw.text((42, total_top + 25), "Mão de Obra:", fill=preto, font=fonte_campo)
+            draw.text((245, total_top + 25), mao_obra, fill=preto, font=fonte_campo)
 
             draw.text((42, total_top + 88), "Total de Peças:", fill=preto, font=fonte_total)
             draw.text((220, total_top + 88), total_pecas, fill=preto, font=fonte_total)
