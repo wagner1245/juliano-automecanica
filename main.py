@@ -4019,7 +4019,7 @@ class ServicesFrame(tk.Frame):
             draw.text((245, 98), "Juliano Automecânica", fill=preto, font=fonte_titulo)
             draw.text((245, 152), "Rua Clemente Cunha Ferreira, 984 - Vila Perracine - Poá - SP", fill=preto, font=fonte_menor)
             draw.text((245, 188), "(11) 99357-7993", fill=preto, font=fonte_menor)
-            draw.text((520, 285), "ORÇAMENTO", fill=preto, font=fonte_subtitulo, anchor="mm")
+            draw.text((455, 285), "ORÇAMENTO", fill=preto, font=fonte_subtitulo, anchor="mm")
 
             y = 340
             draw.line((60, y, largura - 60, y), fill=preto, width=3)
