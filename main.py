@@ -5683,17 +5683,55 @@ class OrdemServicoPreview(tk.Toplevel):
             )
 
     def imprimir_os(self):
-        caminho_salvo = self._salvar_imagem_os_temporaria()
-
         try:
-            if os.name == "nt":
-                os.startfile(caminho_salvo, "print")
+            # Salva uma cópia da OS na pasta de Ordens de Serviço
+            self._salvar_imagem_os_temporaria()
+
+            img = self.imagem_os_original.convert("RGB")
+
+            # A4 em retrato com boa qualidade, igual ao orçamento
+            a4_largura = 2480
+            a4_altura = 3508
+
+            pagina = Image.new("RGB", (a4_largura, a4_altura), "white")
+
+            margem_lateral = 80
+            margem_superior = 80
+            margem_inferior = 80
+
+            area_largura = a4_largura - (margem_lateral * 2)
+            area_altura = a4_altura - margem_superior - margem_inferior
+
+            proporcao_img = img.width / img.height
+            proporcao_area = area_largura / area_altura
+
+            if proporcao_img > proporcao_area:
+                nova_largura = area_largura
+                nova_altura = int(nova_largura / proporcao_img)
             else:
-                webbrowser.open(caminho_salvo)
+                nova_altura = area_altura
+                nova_largura = int(nova_altura * proporcao_img)
+
+            img = img.resize((nova_largura, nova_altura), Image.LANCZOS)
+
+            x = (a4_largura - nova_largura) // 2
+            y = margem_superior + ((area_altura - nova_altura) // 2)
+
+            pagina.paste(img, (x, y))
+
+            pasta_temp = tempfile.gettempdir()
+            caminho_pdf = os.path.join(pasta_temp, "os_impressao_temp.pdf")
+            pagina.save(caminho_pdf, "PDF", resolution=300.0)
+
+            try:
+                os.startfile(caminho_pdf, "print")
+            except Exception:
+                os.startfile(caminho_pdf)
+
         except Exception as e:
             messagebox.showerror(
                 "Erro",
-                f"Não foi possível imprimir a Ordem de Serviço:\n{e}",
+                f"Não foi possível preparar a impressão da Ordem de Serviço:\n{e}",
                 parent=self,
             )
 
