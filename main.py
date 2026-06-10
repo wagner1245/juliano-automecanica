@@ -3998,11 +3998,12 @@ class ServicesFrame(tk.Frame):
                 return ImageFont.load_default()
 
             # Fontes maiores dentro do mesmo JPG
-            fonte_titulo = carregar_fonte(43)
-            fonte_subtitulo = carregar_fonte(31)
-            fonte_normal = carregar_fonte(25)
-            fonte_negrito = carregar_fonte(25, True)
-            fonte_menor = carregar_fonte(21)
+            fonte_titulo = carregar_fonte(36)
+            fonte_subtitulo = carregar_fonte(24)
+            fonte_subtitulo_negrito = carregar_fonte(24, True)
+            fonte_normal = carregar_fonte(18)
+            fonte_negrito = carregar_fonte(18, True)
+            fonte_menor = carregar_fonte(16)
 
             preto = (0, 0, 0)
 
@@ -4019,7 +4020,7 @@ class ServicesFrame(tk.Frame):
             draw.text((245, 98), "Juliano Automecânica", fill=preto, font=fonte_titulo)
             draw.text((245, 152), "Rua Clemente Cunha Ferreira, 984 - Vila Perracine - Poá - SP", fill=preto, font=fonte_menor)
             draw.text((245, 188), "(11) 99357-7993", fill=preto, font=fonte_menor)
-            draw.text((455, 285), "ORÇAMENTO", fill=preto, font=fonte_subtitulo, anchor="mm")
+            draw.text((450, 285), "ORÇAMENTO", fill=preto, font=fonte_subtitulo_negrito, anchor="mm")
 
             y = 340
             draw.line((60, y, largura - 60, y), fill=preto, width=3)
