@@ -5370,8 +5370,6 @@ class OrdemServicoFrame(tk.Frame):
             total_value_x = 985
 
             draw.rectangle((total_left, total_top, total_right, total_bottom), outline=preto, width=2)
-            draw.line((total_left, total_top + 58, total_label_x, total_top + 58), fill=preto, width=2)
-            draw.line((total_label_x, total_top + 58, total_label_x, total_bottom), fill=preto, width=2)
             draw.line((total_value_x, total_top, total_value_x, total_bottom), fill=preto, width=2)
 
             mao_obra = self._formatar_moeda_os(self._valor_para_float_os(self.mao_obra_os_var.get()))
