@@ -5382,7 +5382,7 @@ class OrdemServicoFrame(tk.Frame):
             draw.text((42, total_top + 88), "Total de Peças:", fill=preto, font=fonte_campo)
             draw.text((270, total_top + 88), total_pecas, fill=preto, font=fonte_campo)
 
-            draw.text((675, total_top + 92), "TOTAL DO SERVIÇO:", fill=preto, font=fonte_campo)
+            draw.text((800, total_top + 92), "TOTAL DO SERVIÇO:", fill=preto, font=fonte_campo, anchor="mm")
             draw.text((1110, total_top + 92), total_geral, fill=preto, font=fonte_campo, anchor="mm")
 
             # ASSINATURA
