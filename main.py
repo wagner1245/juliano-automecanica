@@ -4045,21 +4045,47 @@ class ServicesFrame(tk.Frame):
             draw.line((60, y, largura - 60, y), fill=preto, width=3)
 
             y += 36
-            draw.text((60, y), "QUANTIDADE", fill=preto, font=fonte_negrito)
+
+            # =========================
+            # TABELA DO ORÇAMENTO COM CORES LIMPA
+            # Apenas fundo do cabeçalho e linhas alternadas, sem grades internas.
+            # =========================
+            tabela_x1 = 60
+            tabela_x2 = largura - 60
+
+            cor_cabecalho = (235, 239, 245)
+            cor_linha_par = (255, 255, 255)
+            cor_linha_impar = (241, 245, 249)
+
+            altura_cabecalho = 42
+            altura_item = altura_linha
+
+            # Fundo do cabeçalho
+            draw.rectangle(
+                (tabela_x1, y - 8, tabela_x2, y - 8 + altura_cabecalho),
+                fill=cor_cabecalho
+            )
+
+            draw.text((tabela_x1 + 18, y), "QUANTIDADE", fill=preto, font=fonte_negrito)
             draw.text((430, y + 15), "DESCRIÇÃO", fill=preto, font=fonte_negrito, anchor="mm")
-            draw.text((800, y), "VALOR", fill=preto, font=fonte_negrito, anchor="ra")
+            draw.text((tabela_x2 - 20, y), "VALOR", fill=preto, font=fonte_negrito, anchor="ra")
 
-            y += 40
-            draw.line((60, y, largura - 60, y), fill=preto, width=3)
+            y += altura_cabecalho
 
-            y += 34
-
-            for quantidade, descricao, valor in itens:
+            # Fundo alternado dos itens
+            for indice, (quantidade, descricao, valor) in enumerate(itens):
                 valor_limpo = str(valor).replace("R$", "").strip()
-                draw.text((85, y), str(quantidade), fill=preto, font=fonte_normal)
+                cor_linha = cor_linha_par if indice % 2 == 0 else cor_linha_impar
+
+                draw.rectangle(
+                    (tabela_x1, y - 8, tabela_x2, y - 8 + altura_item),
+                    fill=cor_linha
+                )
+
+                draw.text((135, y), str(quantidade), fill=preto, font=fonte_normal, anchor="ma")
                 draw.text((430, y), str(descricao), fill=preto, font=fonte_normal, anchor="ma")
-                draw.text((800, y), f"R$ {valor_limpo}", fill=preto, font=fonte_normal, anchor="ra")
-                y += altura_linha
+                draw.text((tabela_x2 - 20, y), f"R$ {valor_limpo}", fill=preto, font=fonte_normal, anchor="ra")
+                y += altura_item
 
             y += 16
             draw.line((60, y, largura - 60, y), fill=preto, width=3)
