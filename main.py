@@ -2436,8 +2436,18 @@ class OrcamentoPreview(tk.Toplevel):
                 messagebox.showerror("Erro", "Imagem do orçamento não encontrada.")
                 return None
 
-            pasta_base = os.path.dirname(os.path.abspath(__file__))
-            pasta_orcamentos = os.path.join(pasta_base, "orcamentos")
+            # Salva os orçamentos em uma pasta fixa nos Documentos do Windows
+            pasta_documentos = os.path.join(os.path.expanduser("~"), "Documents")
+
+            if not os.path.exists(pasta_documentos):
+                pasta_documentos = os.path.join(os.path.expanduser("~"), "Documentos")
+
+            pasta_orcamentos = os.path.join(
+                pasta_documentos,
+                "Juliano Automecânica",
+                "Orçamentos"
+            )
+
             os.makedirs(pasta_orcamentos, exist_ok=True)
 
             placa_nome = "".join(
@@ -5370,6 +5380,8 @@ class OrdemServicoFrame(tk.Frame):
             total_value_x = 985
 
             draw.rectangle((total_left, total_top, total_right, total_bottom), outline=preto, width=2)
+            draw.line((total_left, total_top + 58, total_label_x, total_top + 58), fill=preto, width=2)
+            draw.line((total_label_x, total_top + 58, total_label_x, total_bottom), fill=preto, width=2)
             draw.line((total_value_x, total_top, total_value_x, total_bottom), fill=preto, width=2)
 
             mao_obra = self._formatar_moeda_os(self._valor_para_float_os(self.mao_obra_os_var.get()))
@@ -5382,7 +5394,7 @@ class OrdemServicoFrame(tk.Frame):
             draw.text((42, total_top + 88), "Total de Peças:", fill=preto, font=fonte_campo)
             draw.text((270, total_top + 88), total_pecas, fill=preto, font=fonte_campo)
 
-            draw.text((800, total_top + 92), "TOTAL DO SERVIÇO:", fill=preto, font=fonte_campo, anchor="mm")
+            draw.text((675, total_top + 92), "TOTAL DO SERVIÇO:", fill=preto, font=fonte_campo)
             draw.text((1110, total_top + 92), total_geral, fill=preto, font=fonte_campo, anchor="mm")
 
             # ASSINATURA
