@@ -4010,16 +4010,18 @@ class ServicesFrame(tk.Frame):
             try:
                 logo = Image.open(LOGO_PATH).convert("RGBA")
                 logo = logo.resize((155, 155), Image.LANCZOS)
-                img.paste(logo, (60, 35), logo)
+                img.paste(logo, (60, 75), logo)
             except Exception:
-                draw.rectangle((60, 35, 215, 190), outline=preto, width=3)
-                draw.text((105, 95), "LOGO", fill=preto, font=fonte_menor)
+                draw.rectangle((60, 75, 215, 230), outline=preto, width=3)
+                draw.text((105, 135), "LOGO", fill=preto, font=fonte_menor)
 
             # Cabeçalho ajustado
-            draw.text((245, 58), "Juliano Automecânica", fill=preto, font=fonte_titulo)
-            draw.text((245, 122), "ORÇAMENTO", fill=preto, font=fonte_subtitulo)
+            draw.text((245, 98), "Juliano Automecânica", fill=preto, font=fonte_titulo)
+            draw.text((245, 152), "Rua Clemente Cunha Ferreira, 984 - Vila Perracine - Poá - SP", fill=preto, font=fonte_menor)
+            draw.text((245, 188), "(11) 99357-7993", fill=preto, font=fonte_menor)
+            draw.text((520, 285), "ORÇAMENTO", fill=preto, font=fonte_subtitulo, anchor="mm")
 
-            y = 230
+            y = 340
             draw.line((60, y, largura - 60, y), fill=preto, width=3)
 
             y += 45
