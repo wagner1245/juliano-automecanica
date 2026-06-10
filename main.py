@@ -5654,7 +5654,7 @@ class OrdemServicoPreview(tk.Toplevel):
         mensagem = (
             "Olá!\n\n"
             "Segue a Ordem de Serviço da Juliano Automecânica. 🔧\n\n"
-            "O arquivo da OS foi gerado no computador e pode ser anexado no WhatsApp."
+            "Qualquer dúvida estamos à disposição. 🔧"
         )
 
         texto_url = urllib.parse.quote(mensagem)
