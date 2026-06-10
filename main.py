@@ -400,7 +400,10 @@ class ClientsFrame(tk.Frame):
         self.cep_var = tk.StringVar()
         self.numero_var = tk.StringVar()
 
-        self.cpf_var.trace_add("write", self._limitar_cpf)
+        self.cpf_ultimo_verificado = ""
+        self.bloquear_verificacao_cpf = False
+
+        self.cpf_var.trace_add("write", self._ao_digitar_cpf)
         self.telefone_var.trace_add("write", self._limitar_telefone)
         self.cep_var.trace_add("write", self._limitar_cep)
 
@@ -968,6 +971,7 @@ class ClientsFrame(tk.Frame):
         if hasattr(self, "cpf_entry"):
             self.cpf_entry.config(state="normal")
 
+        self.cpf_ultimo_verificado = ""
         self.cpf_var.set("")
         self.nome_var.set("")
         self.telefone_var.set("")
@@ -988,6 +992,59 @@ class ClientsFrame(tk.Frame):
         texto = "".join(ch for ch in self.cpf_var.get() if ch.isdigit())[:11]
         if self.cpf_var.get() != texto:
             self.cpf_var.set(texto)
+
+    def _ao_digitar_cpf(self, *args):
+        texto = "".join(ch for ch in self.cpf_var.get() if ch.isdigit())[:11]
+
+        if self.cpf_var.get() != texto:
+            self.cpf_var.set(texto)
+            return
+
+        if self.bloquear_verificacao_cpf:
+            return
+
+        if len(texto) != 11:
+            self.cpf_ultimo_verificado = ""
+            return
+
+        if texto == self.cpf_ultimo_verificado:
+            return
+
+        self.cpf_ultimo_verificado = texto
+
+        try:
+            con = db()
+            cur = con.cursor()
+            cur.execute(
+                """
+                SELECT id, name
+                FROM clients
+                WHERE cpf = ?
+                LIMIT 1
+                """,
+                (texto,),
+            )
+            cliente = cur.fetchone()
+            con.close()
+
+            if not cliente:
+                return
+
+            cliente_id, nome = cliente
+
+            if self.cliente_carregado_id == cliente_id:
+                return
+
+            messagebox.showwarning(
+                "CPF já cadastrado",
+                f"Este CPF já pertence ao cliente:\n\n{nome or 'Nome não informado'}"
+            )
+
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Não foi possível verificar o CPF:\n{e}"
+            )
 
     def _limitar_telefone(self, *args):
         texto = "".join(ch for ch in self.telefone_var.get() if ch.isdigit())[:11]
@@ -1288,7 +1345,10 @@ class ClientsFrame(tk.Frame):
         if hasattr(self, "cpf_entry"):
             self.cpf_entry.config(state="normal")
 
+        self.bloquear_verificacao_cpf = True
         self.cpf_var.set(cliente[0] or "")
+        self.cpf_ultimo_verificado = str(cliente[0] or "").strip()
+        self.bloquear_verificacao_cpf = False
         self.nome_var.set(cliente[1] or "")
         self.telefone_var.set(cliente[2] or "")
         self.cidade_var.set(cliente[3] or "")
