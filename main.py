@@ -5512,7 +5512,15 @@ class OrdemServicoPreview(tk.Toplevel):
         self.imagem_os_original = imagem_os
 
         self.title("Visualização da Ordem de Serviço")
-        self.geometry("850x720")
+
+        largura_janela = 850
+        altura_janela = 720
+        largura_tela = self.winfo_screenwidth()
+        altura_tela = self.winfo_screenheight()
+        pos_x = (largura_tela // 2) - (largura_janela // 2)
+        pos_y = (altura_tela // 2) - (altura_janela // 2)
+
+        self.geometry(f"{largura_janela}x{altura_janela}+{pos_x}+{pos_y}")
         self.minsize(760, 620)
         self.configure(bg="#f5f6f8")
         self.transient(parent)
