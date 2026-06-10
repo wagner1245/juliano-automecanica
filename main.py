@@ -2430,25 +2430,29 @@ class OrcamentoPreview(tk.Toplevel):
         lbl = tk.Label(self.area_interna, image=self.img_tk, bg="#cfd6df")
         lbl.pack(pady=20)
 
+
+    def _pasta_documentos_juliano(self, subpasta):
+        pasta_documentos = os.path.join(os.path.expanduser("~"), "Documents")
+
+        if not os.path.exists(pasta_documentos):
+            pasta_documentos = os.path.join(os.path.expanduser("~"), "Documentos")
+
+        pasta_destino = os.path.join(
+            pasta_documentos,
+            "Juliano Automecânica",
+            subpasta
+        )
+
+        os.makedirs(pasta_destino, exist_ok=True)
+        return pasta_destino
+
     def salvar_imagem_na_pasta_orcamentos(self):
         try:
             if not os.path.exists(self.caminho_imagem):
                 messagebox.showerror("Erro", "Imagem do orçamento não encontrada.")
                 return None
 
-            # Salva os orçamentos em uma pasta fixa nos Documentos do Windows
-            pasta_documentos = os.path.join(os.path.expanduser("~"), "Documents")
-
-            if not os.path.exists(pasta_documentos):
-                pasta_documentos = os.path.join(os.path.expanduser("~"), "Documentos")
-
-            pasta_orcamentos = os.path.join(
-                pasta_documentos,
-                "Juliano Automecânica",
-                "Orçamentos"
-            )
-
-            os.makedirs(pasta_orcamentos, exist_ok=True)
+            pasta_orcamentos = self._pasta_documentos_juliano("Orçamentos")
 
             placa_nome = "".join(
                 ch for ch in str(getattr(self, "placa", "") or "").upper()
@@ -4274,14 +4278,18 @@ class OrdemServicoFrame(tk.Frame):
             )
             return "break"
 
-        pasta_orcamentos = os.path.join(os.path.dirname(__file__), "orcamentos")
+        pasta_documentos = os.path.join(os.path.expanduser("~"), "Documents")
 
-        if not os.path.exists(pasta_orcamentos):
-            messagebox.showwarning(
-                "Atenção",
-                "A pasta de orçamentos ainda não existe."
-            )
-            return "break"
+        if not os.path.exists(pasta_documentos):
+            pasta_documentos = os.path.join(os.path.expanduser("~"), "Documentos")
+
+        pasta_orcamentos = os.path.join(
+            pasta_documentos,
+            "Juliano Automecânica",
+            "Orçamentos"
+        )
+
+        os.makedirs(pasta_orcamentos, exist_ok=True)
 
         arquivos_encontrados = []
 
@@ -5380,8 +5388,6 @@ class OrdemServicoFrame(tk.Frame):
             total_value_x = 985
 
             draw.rectangle((total_left, total_top, total_right, total_bottom), outline=preto, width=2)
-            draw.line((total_left, total_top + 58, total_label_x, total_top + 58), fill=preto, width=2)
-            draw.line((total_label_x, total_top + 58, total_label_x, total_bottom), fill=preto, width=2)
             draw.line((total_value_x, total_top, total_value_x, total_bottom), fill=preto, width=2)
 
             mao_obra = self._formatar_moeda_os(self._valor_para_float_os(self.mao_obra_os_var.get()))
@@ -5394,7 +5400,7 @@ class OrdemServicoFrame(tk.Frame):
             draw.text((42, total_top + 88), "Total de Peças:", fill=preto, font=fonte_campo)
             draw.text((270, total_top + 88), total_pecas, fill=preto, font=fonte_campo)
 
-            draw.text((675, total_top + 92), "TOTAL DO SERVIÇO:", fill=preto, font=fonte_campo)
+            draw.text((800, total_top + 92), "TOTAL DO SERVIÇO:", fill=preto, font=fonte_campo, anchor="mm")
             draw.text((1110, total_top + 92), total_geral, fill=preto, font=fonte_campo, anchor="mm")
 
             # ASSINATURA
@@ -5463,19 +5469,50 @@ class OrdemServicoPreview(tk.Toplevel):
             font=("Segoe UI", 14, "bold"),
         ).pack(side="left")
 
+        botoes = tk.Frame(self, bg="#f5f6f8")
+        botoes.pack(fill="x", padx=12, pady=(0, 10))
+
         tk.Button(
-            topo,
-            text="Fechar",
-            bg="#6b7280",
+            botoes,
+            text="Enviar para Cliente",
+            bg="#16a34a",
             fg="white",
-            activebackground="#4b5563",
+            activebackground="#15803d",
             activeforeground="white",
             bd=0,
-            padx=14,
-            pady=5,
-            font=("Segoe UI", 10, "bold"),
+            padx=18,
+            pady=7,
+            font=("Segoe UI", 11, "bold"),
+            command=self.enviar_para_cliente,
+        ).pack(side="left", padx=(0, 10))
+
+        tk.Button(
+            botoes,
+            text="Imprimir",
+            bg="#2563eb",
+            fg="white",
+            activebackground="#1d4ed8",
+            activeforeground="white",
+            bd=0,
+            padx=18,
+            pady=7,
+            font=("Segoe UI", 11, "bold"),
+            command=self.imprimir_os,
+        ).pack(side="left", padx=(0, 10))
+
+        tk.Button(
+            botoes,
+            text="Fechar",
+            bg="#dc2626",
+            fg="white",
+            activebackground="#b91c1c",
+            activeforeground="white",
+            bd=0,
+            padx=18,
+            pady=7,
+            font=("Segoe UI", 11, "bold"),
             command=self.destroy,
-        ).pack(side="right")
+        ).pack(side="left")
 
         corpo = tk.Frame(self, bg="#e5e7eb")
         corpo.pack(fill="both", expand=True, padx=12, pady=(0, 12))
@@ -5498,6 +5535,99 @@ class OrdemServicoPreview(tk.Toplevel):
         self.label_imagem.pack(padx=12, pady=12)
 
         self._renderizar_imagem()
+
+    def _salvar_imagem_os_temporaria(self):
+        pasta_documentos = os.path.join(os.path.expanduser("~"), "Documents")
+
+        if not os.path.exists(pasta_documentos):
+            pasta_documentos = os.path.join(os.path.expanduser("~"), "Documentos")
+
+        pasta_os = os.path.join(
+            pasta_documentos,
+            "Juliano Automecânica",
+            "Ordens de Serviço"
+        )
+
+        os.makedirs(pasta_os, exist_ok=True)
+
+        nome_cliente = "cliente"
+
+        try:
+            nome_cliente = self.parent.os_nome_var.get().strip() or "cliente"
+        except Exception:
+            pass
+
+        nome_cliente = "".join(
+            ch if ch.isalnum() else "_"
+            for ch in nome_cliente.upper()
+        ).strip("_")
+
+        data_arquivo = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
+        nome_arquivo = f"OS_{nome_cliente}_{data_arquivo}.png"
+
+        caminho = os.path.join(pasta_os, nome_arquivo)
+        self.imagem_os_original.save(caminho)
+        return caminho
+
+    def enviar_para_cliente(self):
+        caminho_salvo = self._salvar_imagem_os_temporaria()
+
+        telefone = simpledialog.askstring(
+            "Enviar para Cliente",
+            "Digite o telefone do cliente com DDD:",
+            parent=self,
+        )
+
+        if telefone is None:
+            return
+
+        telefone_limpo = "".join(ch for ch in str(telefone) if ch.isdigit())[:11]
+
+        if len(telefone_limpo) != 11:
+            messagebox.showwarning(
+                "Atenção",
+                "Informe um telefone válido com 11 dígitos.\nExemplo: 11999999999",
+                parent=self,
+            )
+            return
+
+        mensagem = (
+            "Olá!\n\n"
+            "Segue a Ordem de Serviço da Juliano Automecânica. 🔧\n\n"
+            "O arquivo da OS foi gerado no computador e pode ser anexado no WhatsApp."
+        )
+
+        texto_url = urllib.parse.quote(mensagem)
+        url = f"whatsapp://send?phone=55{telefone_limpo}&text={texto_url}"
+
+        try:
+            webbrowser.open(url)
+            messagebox.showinfo(
+                "Enviar para Cliente",
+                f"WhatsApp aberto.\n\nAnexe a imagem da OS salva em:\n{caminho_salvo}",
+                parent=self,
+            )
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Não foi possível abrir o WhatsApp:\n{e}",
+                parent=self,
+            )
+
+    def imprimir_os(self):
+        caminho_salvo = self._salvar_imagem_os_temporaria()
+
+        try:
+            if os.name == "nt":
+                os.startfile(caminho_salvo, "print")
+            else:
+                webbrowser.open(caminho_salvo)
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Não foi possível imprimir a Ordem de Serviço:\n{e}",
+                parent=self,
+            )
 
     def _atualizar_scroll(self, event=None):
         self.canvas.configure(scrollregion=self.canvas.bbox("all"))
