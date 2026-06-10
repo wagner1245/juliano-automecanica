@@ -5355,7 +5355,7 @@ class OrdemServicoFrame(tk.Frame):
                     draw,
                     ((valor_x + direita) // 2, y_item + 7),
                     valor,
-                    fonte_item_negrito,
+                    fonte_campo,
                     largura_maxima=185,
                     anchor="mm",
                 )
