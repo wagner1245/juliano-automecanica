@@ -5366,7 +5366,7 @@ class OrdemServicoFrame(tk.Frame):
             total_bottom = 1628
             total_left = margem
             total_right = direita
-            total_label_x = 735
+            total_label_x = 650
             total_value_x = 985
 
             draw.rectangle((total_left, total_top, total_right, total_bottom), outline=preto, width=2)
@@ -5384,7 +5384,7 @@ class OrdemServicoFrame(tk.Frame):
             draw.text((42, total_top + 88), "Total de Peças:", fill=preto, font=fonte_campo)
             draw.text((270, total_top + 88), total_pecas, fill=preto, font=fonte_campo)
 
-            draw.text((755, total_top + 92), "TOTAL DO SERVIÇO:", fill=preto, font=fonte_campo)
+            draw.text((675, total_top + 92), "TOTAL DO SERVIÇO:", fill=preto, font=fonte_campo)
             draw.text((1110, total_top + 92), total_geral, fill=preto, font=fonte_campo, anchor="mm")
 
             # ASSINATURA
