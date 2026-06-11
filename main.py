@@ -5453,10 +5453,11 @@ class OrdemServicoFrame(tk.Frame):
                 )
                 self._desenhar_texto_os(
                     draw,
-                    (qtd_x + 18, y_item - 9),
+                    ((qtd_x + valor_x) // 2, y_item + 7),
                     descricao,
                     fonte_campo,
                     largura_maxima=720,
+                    anchor="mm",
                 )
                 self._desenhar_texto_os(
                     draw,
