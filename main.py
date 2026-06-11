@@ -3562,6 +3562,18 @@ class ServicesFrame(tk.Frame):
         ]
 
         quantidade_entry = None
+        descricao_entry = None
+        valor_entry = None
+
+        def confirmar_com_enter(event=None):
+            valor_var.set(self._formatar_valor_item(valor_var.get()))
+            self.adicionar_item_tabela(
+                janela,
+                quantidade_var.get(),
+                descricao_var.get(),
+                valor_var.get(),
+            )
+            return "break"
 
         for i, (label, var) in enumerate(campos, start=1):
             tk.Label(
@@ -3594,9 +3606,12 @@ class ServicesFrame(tk.Frame):
             if label == "Quantidade:":
                 quantidade_entry = entrada
 
+            if label == "Descrição:":
+                descricao_entry = entrada
+
             if label == "Valor R$:":
+                valor_entry = entrada
                 entrada.bind("<FocusOut>", lambda event: valor_var.set(self._formatar_valor_item(valor_var.get())))
-                entrada.bind("<Return>", lambda event: valor_var.set(self._formatar_valor_item(valor_var.get())))
 
         botoes = tk.Frame(frame, bg="#f5f6f8")
         botoes.grid(row=4, column=0, columnspan=2, pady=(16, 0))
@@ -3612,12 +3627,7 @@ class ServicesFrame(tk.Frame):
             padx=22,
             pady=7,
             font=("Segoe UI", 10, "bold"),
-            command=lambda: self.adicionar_item_tabela(
-                janela,
-                quantidade_var.get(),
-                descricao_var.get(),
-                valor_var.get(),
-            ),
+            command=confirmar_com_enter,
         ).pack(side="left", padx=6)
 
         tk.Button(
@@ -3642,6 +3652,11 @@ class ServicesFrame(tk.Frame):
         x = (sw // 2) - (largura // 2)
         y = (sh // 2) - (altura // 2)
         janela.geometry(f"+{x}+{y}")
+
+        if quantidade_entry and descricao_entry and valor_entry:
+            quantidade_entry.bind("<Return>", lambda event: (descricao_entry.focus_force(), descricao_entry.icursor(tk.END), "break")[-1])
+            descricao_entry.bind("<Return>", lambda event: (valor_entry.focus_force(), valor_entry.icursor(tk.END), "break")[-1])
+            valor_entry.bind("<Return>", confirmar_com_enter)
 
         if quantidade_entry:
             janela.after(150, lambda: (quantidade_entry.focus_force(), quantidade_entry.icursor(tk.END)))
