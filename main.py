@@ -5365,8 +5365,18 @@ class OrdemServicoFrame(tk.Frame):
             box_top = 410
             box_bottom = 690
             meio_x = 610
-            draw.rectangle((margem, box_top, direita, box_bottom), outline=preto, width=2)
-            draw.line((meio_x, box_top, meio_x, box_bottom), fill=preto, width=2)
+            # Mesma espessura usada na tabela de itens da Ordem de Serviço.
+            espessura_linha_cliente_veiculo_os = 5
+            draw.rectangle(
+                (margem, box_top, direita, box_bottom),
+                outline=preto,
+                width=espessura_linha_cliente_veiculo_os,
+            )
+            draw.line(
+                (meio_x, box_top, meio_x, box_bottom),
+                fill=preto,
+                width=espessura_linha_cliente_veiculo_os,
+            )
 
             def linha_campo(label, valor, label_x, valor_x, linha_x2, y, max_texto, tipo=None):
                 draw.text((label_x, y), label, fill=preto, font=fonte_label)
