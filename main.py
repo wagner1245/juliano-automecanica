@@ -5415,7 +5415,14 @@ class OrdemServicoFrame(tk.Frame):
                     x += dash + gap
 
             # Coluna esquerda: dados do cliente
-            linha_campo("Cliente:", self.os_nome_var.get(), 42, 160, 560, 440, 360, tipo="cliente")
+            # Limite visual do nome do cliente:
+            # mantém "WAGNER JOSE DOS SANTOS" completo até o último "S";
+            # nomes maiores passam pela abreviação automática.
+            limite_nome_cliente_os = int(
+                self._largura_texto_os("WAGNER JOSE DOS SANTOS", fonte_campo)
+            ) + 2
+
+            linha_campo("Cliente:", self.os_nome_var.get(), 42, 160, 560, 440, limite_nome_cliente_os, tipo="cliente")
             linha_campo("Endereço:", self.os_endereco_var.get(), 42, 170, 560, 490, 360)
             linha_campo("Cidade:", self.os_cidade_var.get(), 42, 160, 560, 540, 360)
             linha_campo("Bairro:", self.os_bairro_var.get(), 42, 160, 560, 590, 360)
