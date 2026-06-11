@@ -5425,10 +5425,13 @@ class OrdemServicoFrame(tk.Frame):
             valor_x = 1010
             cab_bottom = 772
 
-            draw.rectangle((margem, tabela_top, direita, tabela_bottom), outline=preto, width=2)
-            draw.line((qtd_x, tabela_top, qtd_x, tabela_bottom), fill=preto, width=2)
-            draw.line((valor_x, tabela_top, valor_x, tabela_bottom), fill=preto, width=2)
-            draw.line((margem, cab_bottom, direita, cab_bottom), fill=preto, width=2)
+            # Mesma espessura da linha preta principal do cabeçalho da OS.
+            espessura_linha_tabela_os = 5
+
+            draw.rectangle((margem, tabela_top, direita, tabela_bottom), outline=preto, width=espessura_linha_tabela_os)
+            draw.line((qtd_x, tabela_top, qtd_x, tabela_bottom), fill=preto, width=espessura_linha_tabela_os)
+            draw.line((valor_x, tabela_top, valor_x, tabela_bottom), fill=preto, width=espessura_linha_tabela_os)
+            draw.line((margem, cab_bottom, direita, cab_bottom), fill=preto, width=espessura_linha_tabela_os)
 
             draw.text(((margem + qtd_x) // 2, 746), "QUANTIDADE", fill=preto, font=fonte_tabela_cab, anchor="mm")
             draw.text(((qtd_x + valor_x) // 2, 746), "DESCRIÇÃO", fill=preto, font=fonte_tabela_cab, anchor="mm")
@@ -5438,7 +5441,7 @@ class OrdemServicoFrame(tk.Frame):
             altura_linha = (tabela_bottom - cab_bottom) // linhas
             for i in range(1, linhas + 1):
                 y = cab_bottom + i * altura_linha
-                draw.line((margem, y, direita, y), fill=cinza_linha, width=1)
+                draw.line((margem, y, direita, y), fill=preto, width=espessura_linha_tabela_os)
 
             itens = self._coletar_itens_visualizacao_os()
             y_item = cab_bottom + 18
