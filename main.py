@@ -2399,6 +2399,10 @@ class OrcamentoPreview(tk.Toplevel):
             con = db()
             cur = con.cursor()
 
+            # Se o orçamento tiver mais de 5 itens, o arquivo oficial é o PDF multipágina.
+            # Se tiver até 5 itens, continua sendo o JPG normal.
+            caminho_arquivo = self.caminho_pdf if self.caminho_pdf else self.caminho_imagem
+
             cur.execute(
                 """
                 INSERT INTO orcamentos_enviados (
@@ -2418,7 +2422,7 @@ class OrcamentoPreview(tk.Toplevel):
                     self.nome_cliente,
                     self.telefone,
                     self.veiculo,
-                    self.caminho_imagem,
+                    caminho_arquivo,
                     self.mao_de_obra,
                     self.total_pecas,
                     self.total_servicos,
@@ -2441,6 +2445,10 @@ class OrcamentoPreview(tk.Toplevel):
             con = db()
             cur = con.cursor()
 
+            # Se for orçamento paginado, salva o caminho do PDF.
+            # Se for orçamento simples, salva o caminho do JPG.
+            caminho_arquivo = self.caminho_pdf if self.caminho_pdf else self.caminho_imagem
+
             cur.execute(
                 """
                 INSERT INTO orcamentos_enviados (
@@ -2460,7 +2468,7 @@ class OrcamentoPreview(tk.Toplevel):
                     self.nome_cliente,
                     self.telefone,
                     self.veiculo,
-                    self.caminho_imagem,
+                    caminho_arquivo,
                     self.mao_de_obra,
                     self.total_pecas,
                     self.total_servicos,
@@ -2656,6 +2664,14 @@ class OrcamentoPreview(tk.Toplevel):
         if not caminho_salvo:
             return
 
+        # Mantém a mesma regra da visualização/impressão:
+        # até 5 itens salva JPG; acima de 5 itens salva PDF multipágina.
+        # O WhatsApp é aberto com a mensagem pronta; o arquivo fica salvo para anexar.
+        if self.caminho_pdf:
+            tipo_arquivo = "PDF multipágina"
+        else:
+            tipo_arquivo = "JPG"
+
         mensagem = (
             f"Olá {self.nome_cliente}!\n\n"
             f"Segue seu orçamento da *Juliano Automecânica* 🔧\n\n"
@@ -2667,6 +2683,12 @@ class OrcamentoPreview(tk.Toplevel):
 
         if self.salvar_orcamento_enviado():
             webbrowser.open(url)
+            messagebox.showinfo(
+                "Orçamento pronto para envio",
+                f"O orçamento foi salvo como {tipo_arquivo}.\n\n"
+                f"Arquivo:\n{caminho_salvo}\n\n"
+                "Agora anexe esse arquivo na conversa do WhatsApp do cliente."
+            )
 
     def _pedir_telefone_whatsapp(self):
         janela = tk.Toplevel(self)
