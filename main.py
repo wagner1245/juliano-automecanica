@@ -2666,11 +2666,13 @@ class OrcamentoPreview(tk.Toplevel):
 
         # Mantém a mesma regra da visualização/impressão:
         # até 5 itens salva JPG; acima de 5 itens salva PDF multipágina.
-        # O WhatsApp é aberto com a mensagem pronta; o arquivo fica salvo para anexar.
+        # Antes de abrir o WhatsApp, orienta o usuário onde clicar para anexar.
         if self.caminho_pdf:
-            tipo_arquivo = "PDF multipágina"
+            tipo_arquivo = "PDF"
+            instrucao_anexo = "DOCUMENTO"
         else:
-            tipo_arquivo = "JPG"
+            tipo_arquivo = "IMAGEM"
+            instrucao_anexo = "FOTOS E VÍDEOS"
 
         mensagem = (
             f"Olá {self.nome_cliente}!\n\n"
@@ -2682,13 +2684,15 @@ class OrcamentoPreview(tk.Toplevel):
         url = f"whatsapp://send?phone={telefone_envio}&text={texto_url}"
 
         if self.salvar_orcamento_enviado():
-            webbrowser.open(url)
             messagebox.showinfo(
-                "Orçamento pronto para envio",
+                "Arquivo pronto para envio",
                 f"O orçamento foi salvo como {tipo_arquivo}.\n\n"
-                f"Arquivo:\n{caminho_salvo}\n\n"
-                "Agora anexe esse arquivo na conversa do WhatsApp do cliente."
+                "✓ Clique em:\n"
+                f"{instrucao_anexo}\n\n"
+                "Depois selecione o orçamento para enviar ao cliente.\n\n"
+                f"Arquivo:\n{caminho_salvo}"
             )
+            webbrowser.open(url)
 
     def _pedir_telefone_whatsapp(self):
         janela = tk.Toplevel(self)
