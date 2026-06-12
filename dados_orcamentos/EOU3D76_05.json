@@ -1,0 +1,18 @@
+{
+    "cliente": "WAGNER JOSE DOS SANTOS",
+    "telefone": "",
+    "veiculo": "CHEVROLET - PRISMA",
+    "placa": "EOU-3D76",
+    "mao_de_obra": "R$ 0,00",
+    "total_pecas": "R$ 230,00",
+    "total_servicos": "R$ 230,00",
+    "caminho_imagem": "C:\\Users\\vaion\\Documents\\Juliano Automecânica\\Orçamentos\\EOU3D76_05.jpg",
+    "data_criacao": "10/06/2026 18:10:19",
+    "itens": [
+        {
+            "quantidade": "1",
+            "descricao": "TROCA DE OLEO",
+            "valor_unitario": "230,00"
+        }
+    ]
+}

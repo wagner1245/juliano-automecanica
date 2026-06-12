@@ -1,0 +1,38 @@
+{
+    "cliente": "WAGNER JOSE DOS SANTOS",
+    "telefone": "",
+    "veiculo": "CHEVROLET - PRISMA",
+    "placa": "EOU-3D76",
+    "mao_de_obra": "R$ 0,00",
+    "total_pecas": "R$ 1.274,00",
+    "total_servicos": "R$ 1.274,00",
+    "caminho_imagem": "C:\\Users\\vaion\\Documents\\Juliano Automecânica\\Orçamentos\\EOU3D76_03.jpg",
+    "data_criacao": "10/06/2026 16:13:24",
+    "itens": [
+        {
+            "quantidade": "1",
+            "descricao": "TROCA DE OLEO",
+            "valor_unitario": "230,00"
+        },
+        {
+            "quantidade": "2",
+            "descricao": "TROCA DE DISCO DE FREIO",
+            "valor_unitario": "234,00"
+        },
+        {
+            "quantidade": "4",
+            "descricao": "TROCA DE BUCHA DE BANDEIJAS",
+            "valor_unitario": "452,00"
+        },
+        {
+            "quantidade": "1",
+            "descricao": "TENSOR DE CORREIA",
+            "valor_unitario": "125,00"
+        },
+        {
+            "quantidade": "1",
+            "descricao": "TROCA DE ROLAMENTO CENTRO",
+            "valor_unitario": "233,00"
+        }
+    ]
+}

@@ -2290,6 +2290,8 @@ class OrcamentoPreview(tk.Toplevel):
         total_pecas="R$ 0,00",
         total_servicos="R$ 0,00",
         itens=None,
+        caminho_pdf=None,
+        paginas_preview=None,
     ):
         super().__init__(parent)
 
@@ -2309,6 +2311,9 @@ class OrcamentoPreview(tk.Toplevel):
         self.total_pecas = total_pecas
         self.total_servicos = total_servicos
         self.itens = itens or []
+        self.caminho_pdf = caminho_pdf
+        self.paginas_preview = paginas_preview or []
+        self.imgs_tk = []
 
         self.update_idletasks()
         largura = 900
@@ -2473,22 +2478,28 @@ class OrcamentoPreview(tk.Toplevel):
             return False
 
     def mostrar_imagem(self):
-        if not os.path.exists(self.caminho_imagem):
-            messagebox.showerror("Erro", "Imagem do orçamento não encontrada.")
-            return
+        caminhos = list(self.paginas_preview) if self.paginas_preview else [self.caminho_imagem]
 
-        img = Image.open(self.caminho_imagem)
+        self.imgs_tk = []
 
-        largura_max = 760
-        proporcao = largura_max / img.width
-        nova_altura = int(img.height * proporcao)
+        for caminho in caminhos:
+            if not os.path.exists(caminho):
+                messagebox.showerror("Erro", "Imagem do orçamento não encontrada.")
+                return
 
-        img = img.resize((largura_max, nova_altura), Image.LANCZOS)
+            img = Image.open(caminho)
 
-        self.img_tk = ImageTk.PhotoImage(img)
+            largura_max = 760
+            proporcao = largura_max / img.width
+            nova_altura = int(img.height * proporcao)
 
-        lbl = tk.Label(self.area_interna, image=self.img_tk, bg="#cfd6df")
-        lbl.pack(pady=20)
+            img = img.resize((largura_max, nova_altura), Image.LANCZOS)
+
+            img_tk = ImageTk.PhotoImage(img)
+            self.imgs_tk.append(img_tk)
+
+            lbl = tk.Label(self.area_interna, image=img_tk, bg="#cfd6df")
+            lbl.pack(pady=20)
 
 
     def _pasta_documentos_juliano(self, subpasta):
@@ -2508,8 +2519,10 @@ class OrcamentoPreview(tk.Toplevel):
 
     def salvar_imagem_na_pasta_orcamentos(self):
         try:
-            if not os.path.exists(self.caminho_imagem):
-                messagebox.showerror("Erro", "Imagem do orçamento não encontrada.")
+            caminho_origem = self.caminho_pdf if self.caminho_pdf else self.caminho_imagem
+
+            if not caminho_origem or not os.path.exists(caminho_origem):
+                messagebox.showerror("Erro", "Arquivo do orçamento não encontrado.")
                 return None
 
             pasta_orcamentos = self._pasta_documentos_juliano("Orçamentos")
@@ -2519,21 +2532,20 @@ class OrcamentoPreview(tk.Toplevel):
                 if ch.isalnum()
             )
 
+            extensao = ".pdf" if self.caminho_pdf else ".jpg"
+
             if placa_nome:
-                nome_arquivo = f"{placa_nome}.jpg"
+                nome_arquivo = f"{placa_nome}{extensao}"
             else:
-                nome_arquivo = f"ORCAMENTO_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+                nome_arquivo = f"ORCAMENTO_{datetime.now().strftime('%Y%m%d_%H%M%S')}{extensao}"
 
             caminho_destino = os.path.join(pasta_orcamentos, nome_arquivo)
 
-            # Primeiro arquivo: EOU3D73.jpg
-            # Segundo: EOU3D73_02.jpg
-            # Terceiro: EOU3D73_03.jpg
             if os.path.exists(caminho_destino) and placa_nome:
                 contador = 2
 
                 while True:
-                    nome_incremental = f"{placa_nome}_{contador:02d}.jpg"
+                    nome_incremental = f"{placa_nome}_{contador:02d}{extensao}"
                     caminho_incremental = os.path.join(pasta_orcamentos, nome_incremental)
 
                     if not os.path.exists(caminho_incremental):
@@ -2544,12 +2556,12 @@ class OrcamentoPreview(tk.Toplevel):
 
             elif os.path.exists(caminho_destino):
                 contador = 2
-                nome_base, extensao = os.path.splitext(nome_arquivo)
+                nome_base, extensao_atual = os.path.splitext(nome_arquivo)
 
                 while True:
                     caminho_incremental = os.path.join(
                         pasta_orcamentos,
-                        f"{nome_base}_{contador:02d}{extensao}"
+                        f"{nome_base}_{contador:02d}{extensao_atual}"
                     )
 
                     if not os.path.exists(caminho_incremental):
@@ -2558,10 +2570,14 @@ class OrcamentoPreview(tk.Toplevel):
 
                     contador += 1
 
-            if os.path.abspath(self.caminho_imagem) != os.path.abspath(caminho_destino):
-                shutil.copy(self.caminho_imagem, caminho_destino)
+            if os.path.abspath(caminho_origem) != os.path.abspath(caminho_destino):
+                shutil.copy(caminho_origem, caminho_destino)
 
-            self.caminho_imagem = caminho_destino
+            if self.caminho_pdf:
+                self.caminho_pdf = caminho_destino
+            else:
+                self.caminho_imagem = caminho_destino
+
             self.salvar_dados_orcamento_json(caminho_destino)
             return caminho_destino
 
@@ -2746,8 +2762,10 @@ class OrcamentoPreview(tk.Toplevel):
         return resultado["telefone"]
 
     def imprimir_orcamento(self):
-        if not os.path.exists(self.caminho_imagem):
-            messagebox.showerror("Erro", "Imagem do orçamento não encontrada.")
+        caminho_origem = self.caminho_pdf if self.caminho_pdf else self.caminho_imagem
+
+        if not caminho_origem or not os.path.exists(caminho_origem):
+            messagebox.showerror("Erro", "Arquivo do orçamento não encontrado.")
             return
 
         caminho_salvo = self.salvar_imagem_na_pasta_orcamentos()
@@ -2759,6 +2777,13 @@ class OrcamentoPreview(tk.Toplevel):
             return
 
         try:
+            if self.caminho_pdf:
+                try:
+                    os.startfile(self.caminho_pdf, "print")
+                except Exception:
+                    os.startfile(self.caminho_pdf)
+                return
+
             img = Image.open(self.caminho_imagem).convert("RGB")
 
             # A4 em retrato com boa qualidade
@@ -3959,6 +3984,8 @@ class ServicesFrame(tk.Frame):
             messagebox.showwarning("Atenção", "Adicione pelo menos um item ao orçamento.")
             return
 
+        self.orcamento_pdf_temp = None
+        self.orcamento_paginas_preview = []
         caminho_imagem = self.gerar_imagem_orcamento(nome_cliente, veiculo, itens)
 
         if not caminho_imagem:
@@ -3985,23 +4012,24 @@ class ServicesFrame(tk.Frame):
             total_pecas=self.total_pecas_var.get(),
             total_servicos=self.total_servicos_var.get(),
             itens=itens,
+            caminho_pdf=getattr(self, "orcamento_pdf_temp", None),
+            paginas_preview=getattr(self, "orcamento_paginas_preview", []),
         )
 
     def gerar_imagem_orcamento(self, nome_cliente, veiculo, itens):
         try:
-            # Mantém a folha no mesmo tamanho para a pré-visualização não reduzir automaticamente.
-            # O conteúdo interno foi aumentado.
             largura = 900
+            altura = 1200
             altura_linha = 48
-            altura = 1200 + max(0, len(itens) - 4) * altura_linha
 
-            img = Image.new("RGB", (largura, altura), "white")
-            draw = ImageDraw.Draw(img)
+            self.orcamento_pdf_temp = None
+            self.orcamento_paginas_preview = []
 
             def carregar_fonte(tamanho, negrito=False):
                 fontes = [
                     "C:/Windows/Fonts/arialbd.ttf" if negrito else "C:/Windows/Fonts/arial.ttf",
                     "C:/Windows/Fonts/segoeuib.ttf" if negrito else "C:/Windows/Fonts/segoeui.ttf",
+                    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf" if negrito else "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
                 ]
 
                 for fonte in fontes:
@@ -4012,131 +4040,225 @@ class ServicesFrame(tk.Frame):
 
                 return ImageFont.load_default()
 
-            # Fontes maiores dentro do mesmo JPG
             fonte_titulo = carregar_fonte(36)
-            fonte_subtitulo = carregar_fonte(24)
             fonte_subtitulo_negrito = carregar_fonte(24, True)
             fonte_normal = carregar_fonte(18)
             fonte_negrito = carregar_fonte(18, True)
             fonte_menor = carregar_fonte(16)
 
             preto = (0, 0, 0)
-
-            # LOGO maior dentro do mesmo JPG
-            try:
-                logo = Image.open(LOGO_PATH).convert("RGBA")
-                logo = logo.resize((155, 155), Image.LANCZOS)
-                img.paste(logo, (60, 75), logo)
-            except Exception:
-                draw.rectangle((60, 75, 215, 230), outline=preto, width=3)
-                draw.text((105, 135), "LOGO", fill=preto, font=fonte_menor)
-
-            # Cabeçalho ajustado
-            draw.text((245, 98), "Juliano Automecânica", fill=preto, font=fonte_titulo)
-            draw.text((245, 152), "Rua Clemente Cunha Ferreira, 984 - Vila Perracine - Poá - SP", fill=preto, font=fonte_menor)
-            draw.text((245, 188), "(11) 99357-7993", fill=preto, font=fonte_menor)
-            draw.text((450, 285), "ORÇAMENTO", fill=preto, font=fonte_subtitulo_negrito, anchor="mm")
-
-            y = 340
-            draw.line((60, y, largura - 60, y), fill=preto, width=3)
-
-            y += 45
-            data_atual = datetime.now().strftime("%d/%m/%Y")
-            draw.text((60, y), f"Data: {data_atual}", fill=preto, font=fonte_negrito)
-
-            y += 55
-            draw.text((60, y), f"Cliente: {nome_cliente}", fill=preto, font=fonte_normal)
-
-            y += 48
-            draw.text((60, y), f"Veículo: {veiculo}", fill=preto, font=fonte_normal)
-
-            placa_visual = ""
-            if hasattr(self, "placa_orcamento_var"):
-                placa_visual = self.placa_orcamento_var.get().strip().upper()
-            elif hasattr(self, "busca_placa_var"):
-                placa_visual = self.busca_placa_var.get().strip().upper()
-
-            y += 48
-            draw.text((60, y), f"Placa: {placa_visual}", fill=preto, font=fonte_normal)
-
-            y += 62
-            draw.line((60, y, largura - 60, y), fill=preto, width=3)
-
-            y += 36
-
-            # =========================
-            # TABELA DO ORÇAMENTO COM CORES LIMPA
-            # Apenas fundo do cabeçalho e linhas alternadas, sem grades internas.
-            # =========================
-            tabela_x1 = 60
-            tabela_x2 = largura - 60
-
             cor_cabecalho = (235, 239, 245)
             cor_linha_par = (255, 255, 255)
             cor_linha_impar = (241, 245, 249)
 
+            tabela_x1 = 60
+            tabela_x2 = largura - 60
             altura_cabecalho = 42
             altura_item = altura_linha
 
-            # Fundo do cabeçalho
-            draw.rectangle(
-                (tabela_x1, y - 8, tabela_x2, y - 8 + altura_cabecalho),
-                fill=cor_cabecalho
-            )
+            def valor_limpo_formatado(valor):
+                return str(valor).replace("R$", "").strip()
 
-            draw.text((tabela_x1 + 18, y), "QUANTIDADE", fill=preto, font=fonte_negrito)
-            draw.text((430, y + 15), "DESCRIÇÃO", fill=preto, font=fonte_negrito, anchor="mm")
-            draw.text((tabela_x2 - 20, y), "VALOR", fill=preto, font=fonte_negrito, anchor="ra")
+            def desenhar_cabecalho_tabela(draw, y):
+                draw.rectangle(
+                    (tabela_x1, y - 8, tabela_x2, y - 8 + altura_cabecalho),
+                    fill=cor_cabecalho
+                )
+                draw.text((tabela_x1 + 18, y), "QUANTIDADE", fill=preto, font=fonte_negrito)
+                draw.text((430, y + 15), "DESCRIÇÃO", fill=preto, font=fonte_negrito, anchor="mm")
+                draw.text((tabela_x2 - 20, y), "VALOR", fill=preto, font=fonte_negrito, anchor="ra")
+                return y + altura_cabecalho
 
-            y += altura_cabecalho
-
-            # Fundo alternado dos itens
-            for indice, (quantidade, descricao, valor) in enumerate(itens):
-                valor_limpo = str(valor).replace("R$", "").strip()
-                cor_linha = cor_linha_par if indice % 2 == 0 else cor_linha_impar
-
+            def desenhar_item(draw, y, indice_visual, quantidade, descricao, valor):
+                cor_linha = cor_linha_par if indice_visual % 2 == 0 else cor_linha_impar
                 draw.rectangle(
                     (tabela_x1, y - 8, tabela_x2, y - 8 + altura_item),
                     fill=cor_linha
                 )
-
                 draw.text((135, y), str(quantidade), fill=preto, font=fonte_normal, anchor="ma")
                 draw.text((430, y), str(descricao), fill=preto, font=fonte_normal, anchor="ma")
-                draw.text((tabela_x2 - 20, y), f"R$ {valor_limpo}", fill=preto, font=fonte_normal, anchor="ra")
-                y += altura_item
+                draw.text((tabela_x2 - 20, y), f"R$ {valor_limpo_formatado(valor)}", fill=preto, font=fonte_normal, anchor="ra")
+                return y + altura_item
 
-            y += 16
-            draw.line((60, y, largura - 60, y), fill=preto, width=3)
+            def desenhar_totais(draw, y):
+                y += 16
+                draw.line((60, y, largura - 60, y), fill=preto, width=3)
 
-            y += 45
-            mao_obra = "0,00"
-            if hasattr(self, "mao_obra_var"):
-                mao_obra = self.mao_obra_var.get().strip() or "0,00"
+                y += 45
+                mao_obra = "0,00"
+                if hasattr(self, "mao_obra_var"):
+                    mao_obra = self.mao_obra_var.get().strip() or "0,00"
 
-            total_pecas = self.total_pecas_var.get().replace("R$", "").strip()
-            total_servicos = self.total_servicos_var.get().replace("R$", "").strip()
+                total_pecas = self.total_pecas_var.get().replace("R$", "").strip()
+                total_servicos = self.total_servicos_var.get().replace("R$", "").strip()
 
-            draw.text((60, y), f"Mão de Obra: R$ {mao_obra}", fill=preto, font=fonte_normal)
-            y += 48
-            draw.text((60, y), f"Total de Peças: R$ {total_pecas}", fill=preto, font=fonte_normal)
-            y += 52
-            draw.text((60, y), f"Total de Serviços: R$ {total_servicos}", fill=preto, font=fonte_negrito)
+                draw.text((60, y), f"Mão de Obra: R$ {mao_obra}", fill=preto, font=fonte_normal)
+                y += 48
+                draw.text((60, y), f"Total de Peças: R$ {total_pecas}", fill=preto, font=fonte_normal)
+                y += 52
+                draw.text((60, y), f"Total de Serviços: R$ {total_servicos}", fill=preto, font=fonte_negrito)
 
-            y += 78
-            draw.line((60, y, largura - 60, y), fill=preto, width=3)
+                y += 78
+                draw.line((60, y, largura - 60, y), fill=preto, width=3)
 
-            y += 45
-            draw.text((60, y), "Obrigado pela preferência!", fill=preto, font=fonte_menor)
+                y += 45
+                draw.text((60, y), "Obrigado pela preferência!", fill=preto, font=fonte_menor)
+                return y
 
-            # A pré-visualização usa apenas um arquivo temporário.
-            # O orçamento definitivo só é salvo ao clicar em Imprimir
-            # ou ao confirmar o envio para o cliente.
+            def criar_pagina_completa(itens_pagina, mostrar_totais=True):
+                img = Image.new("RGB", (largura, altura), "white")
+                draw = ImageDraw.Draw(img)
+
+                try:
+                    logo = Image.open(LOGO_PATH).convert("RGBA")
+                    logo = logo.resize((155, 155), Image.LANCZOS)
+                    img.paste(logo, (60, 75), logo)
+                except Exception:
+                    draw.rectangle((60, 75, 215, 230), outline=preto, width=3)
+                    draw.text((105, 135), "LOGO", fill=preto, font=fonte_menor)
+
+                draw.text((245, 98), "Juliano Automecânica", fill=preto, font=fonte_titulo)
+                draw.text((245, 152), "Rua Clemente Cunha Ferreira, 984 - Vila Perracine - Poá - SP", fill=preto, font=fonte_menor)
+                draw.text((245, 188), "(11) 99357-7993", fill=preto, font=fonte_menor)
+                draw.text((450, 285), "ORÇAMENTO", fill=preto, font=fonte_subtitulo_negrito, anchor="mm")
+
+                y = 340
+                draw.line((60, y, largura - 60, y), fill=preto, width=3)
+
+                y += 45
+                data_atual = datetime.now().strftime("%d/%m/%Y")
+                draw.text((60, y), f"Data: {data_atual}", fill=preto, font=fonte_negrito)
+
+                y += 55
+                draw.text((60, y), f"Cliente: {nome_cliente}", fill=preto, font=fonte_normal)
+
+                y += 48
+                draw.text((60, y), f"Veículo: {veiculo}", fill=preto, font=fonte_normal)
+
+                placa_visual = ""
+                if hasattr(self, "placa_orcamento_var"):
+                    placa_visual = self.placa_orcamento_var.get().strip().upper()
+                elif hasattr(self, "busca_placa_var"):
+                    placa_visual = self.busca_placa_var.get().strip().upper()
+
+                y += 48
+                draw.text((60, y), f"Placa: {placa_visual}", fill=preto, font=fonte_normal)
+
+                y += 62
+                draw.line((60, y, largura - 60, y), fill=preto, width=3)
+
+                y += 36
+                y = desenhar_cabecalho_tabela(draw, y)
+
+                for indice, (quantidade, descricao, valor) in enumerate(itens_pagina):
+                    y = desenhar_item(draw, y, indice, quantidade, descricao, valor)
+
+                if mostrar_totais:
+                    desenhar_totais(draw, y)
+                else:
+                    y += 16
+                    draw.line((60, y, largura - 60, y), fill=preto, width=3)
+                    y += 35
+                    draw.text((60, y), "Continua na próxima página.", fill=preto, font=fonte_menor)
+
+                return img
+
+            def criar_pagina_continuacao(itens_pagina, mostrar_totais=False):
+                img = Image.new("RGB", (largura, altura), "white")
+                draw = ImageDraw.Draw(img)
+
+                y = 70
+                y = desenhar_cabecalho_tabela(draw, y)
+
+                for indice, (quantidade, descricao, valor) in enumerate(itens_pagina):
+                    y = desenhar_item(draw, y, indice, quantidade, descricao, valor)
+
+                if mostrar_totais:
+                    desenhar_totais(draw, y)
+
+                return img
+
+            def salvar_preview(img, indice):
+                pasta_temp = tempfile.gettempdir()
+                nome_arquivo = f"preview_orcamento_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{indice:02d}.jpg"
+                caminho = os.path.join(pasta_temp, nome_arquivo)
+                img.save(caminho, "JPEG", quality=95)
+                return caminho
+
+            def preparar_pagina_a4(img):
+                a4_largura = 2480
+                a4_altura = 3508
+                pagina = Image.new("RGB", (a4_largura, a4_altura), "white")
+
+                margem_lateral = 80
+                margem_superior = 80
+                margem_inferior = 80
+
+                area_largura = a4_largura - (margem_lateral * 2)
+                area_altura = a4_altura - margem_superior - margem_inferior
+
+                proporcao_img = img.width / img.height
+                proporcao_area = area_largura / area_altura
+
+                if proporcao_img > proporcao_area:
+                    nova_largura = area_largura
+                    nova_altura = int(nova_largura / proporcao_img)
+                else:
+                    nova_altura = area_altura
+                    nova_largura = int(nova_altura * proporcao_img)
+
+                img_redimensionada = img.resize((nova_largura, nova_altura), Image.LANCZOS)
+                x = (a4_largura - nova_largura) // 2
+                y = (a4_altura - nova_altura) // 2
+                pagina.paste(img_redimensionada, (x, y))
+                return pagina
+
+            # Até 5 itens: mantém o comportamento atual em JPG.
+            if len(itens) <= 5:
+                pagina_unica = criar_pagina_completa(itens, mostrar_totais=True)
+                caminho = salvar_preview(pagina_unica, 1)
+                self.orcamento_paginas_preview = [caminho]
+                return caminho
+
+            paginas = []
+            caminhos_preview = []
+
+            # Página 1: layout completo, no máximo 5 itens, sem totais.
+            paginas.append(criar_pagina_completa(itens[:5], mostrar_totais=False))
+
+            restantes = itens[5:]
+            ITENS_CONTINUACAO_CHEIA = 21
+            ITENS_CONTINUACAO_COM_TOTAIS = 18
+
+            while restantes:
+                if len(restantes) <= ITENS_CONTINUACAO_COM_TOTAIS:
+                    paginas.append(criar_pagina_continuacao(restantes, mostrar_totais=True))
+                    restantes = []
+                else:
+                    paginas.append(criar_pagina_continuacao(restantes[:ITENS_CONTINUACAO_CHEIA], mostrar_totais=False))
+                    restantes = restantes[ITENS_CONTINUACAO_CHEIA:]
+
+            for indice, pagina in enumerate(paginas, start=1):
+                caminhos_preview.append(salvar_preview(pagina, indice))
+
+            paginas_a4 = [preparar_pagina_a4(pagina) for pagina in paginas]
             pasta_temp = tempfile.gettempdir()
-            nome_arquivo = f"preview_orcamento_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-            caminho = os.path.join(pasta_temp, nome_arquivo)
+            caminho_pdf = os.path.join(
+                pasta_temp,
+                f"preview_orcamento_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+            )
 
-            img.save(caminho, "JPEG", quality=95)
-            return caminho
+            paginas_a4[0].save(
+                caminho_pdf,
+                "PDF",
+                resolution=300.0,
+                save_all=True,
+                append_images=paginas_a4[1:]
+            )
+
+            self.orcamento_pdf_temp = caminho_pdf
+            self.orcamento_paginas_preview = caminhos_preview
+            return caminhos_preview[0]
 
         except Exception as e:
             messagebox.showerror("Erro", f"Não foi possível gerar a imagem do orçamento:\n{e}")

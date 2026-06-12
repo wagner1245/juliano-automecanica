@@ -1,0 +1,43 @@
+{
+    "cliente": "WAGNER JOSE DOS SANTOS",
+    "telefone": "",
+    "veiculo": "VOLKSVAGEM - GOLF",
+    "placa": "EOU-3D76",
+    "mao_de_obra": "R$ 0,00",
+    "total_pecas": "R$ 1.918,00",
+    "total_servicos": "R$ 1.918,00",
+    "caminho_imagem": "C:\\Users\\vaion\\Documents\\Juliano Automecânica\\Orçamentos\\EOU3D76.pdf",
+    "data_criacao": "12/06/2026 14:19:10",
+    "itens": [
+        {
+            "quantidade": "1",
+            "descricao": "TROCA DE OLEO",
+            "valor_unitario": "230,00"
+        },
+        {
+            "quantidade": "2",
+            "descricao": "TESTE",
+            "valor_unitario": "290,00"
+        },
+        {
+            "quantidade": "3",
+            "descricao": "TESTE",
+            "valor_unitario": "400,00"
+        },
+        {
+            "quantidade": "5",
+            "descricao": "TESTE",
+            "valor_unitario": "109,00"
+        },
+        {
+            "quantidade": "6",
+            "descricao": "TESTE",
+            "valor_unitario": "389,00"
+        },
+        {
+            "quantidade": "8",
+            "descricao": "TROCA DE TESTE",
+            "valor_unitario": "500,00"
+        }
+    ]
+}
