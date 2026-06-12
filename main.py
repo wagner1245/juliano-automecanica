@@ -4549,7 +4549,7 @@ class OrdemServicoFrame(tk.Frame):
             for nome_arquivo in os.listdir(pasta_orcamentos):
                 nome_maiusculo = nome_arquivo.upper()
 
-                if not nome_maiusculo.lower().endswith((".jpg", ".jpeg")):
+                if not nome_maiusculo.lower().endswith((".jpg", ".jpeg", ".pdf")):
                     continue
 
                 nome_sem_extensao = os.path.splitext(nome_maiusculo)[0]
@@ -5690,6 +5690,117 @@ class OrdemServicoFrame(tk.Frame):
             )
             return None
 
+
+    def _gerar_imagem_continuacao_os(self, itens, numero_pagina=2):
+        try:
+            largura = 1240
+            altura = 1754
+
+            imagem = Image.new("RGB", (largura, altura), "white")
+            draw = ImageDraw.Draw(imagem)
+
+            preto = "#000000"
+            margem = 24
+            direita = largura - margem
+
+            fonte_tabela_cab = self._fonte_os(24, negrito=True)
+            fonte_campo = self._fonte_os(26, negrito=True)
+            fonte_pequena = self._fonte_os(18, negrito=True)
+
+            tabela_top = 70
+            tabela_bottom = 1660
+            qtd_x = 230
+            valor_x = 1010
+            cab_bottom = 125
+            espessura_linha_tabela_os = 5
+
+            draw.rectangle((margem, tabela_top, direita, tabela_bottom), outline=preto, width=espessura_linha_tabela_os)
+            draw.line((qtd_x, tabela_top, qtd_x, tabela_bottom), fill=preto, width=espessura_linha_tabela_os)
+            draw.line((valor_x, tabela_top, valor_x, tabela_bottom), fill=preto, width=espessura_linha_tabela_os)
+            draw.line((margem, cab_bottom, direita, cab_bottom), fill=preto, width=espessura_linha_tabela_os)
+
+            draw.text(((margem + qtd_x) // 2, 98), "QUANTIDADE", fill=preto, font=fonte_tabela_cab, anchor="mm")
+            draw.text(((qtd_x + valor_x) // 2, 98), "DESCRIÇÃO", fill=preto, font=fonte_tabela_cab, anchor="mm")
+            draw.text(((valor_x + direita) // 2, 98), "VALOR", fill=preto, font=fonte_tabela_cab, anchor="mm")
+
+            linhas = 36
+            altura_linha = (tabela_bottom - cab_bottom) // linhas
+
+            for i in range(1, linhas + 1):
+                y = cab_bottom + i * altura_linha
+                draw.line((margem, y, direita, y), fill=preto, width=espessura_linha_tabela_os)
+
+            y_item = cab_bottom + 20
+            for quantidade, descricao, valor in itens[:linhas]:
+                self._desenhar_texto_os(
+                    draw,
+                    ((margem + qtd_x) // 2, y_item + 7),
+                    quantidade,
+                    fonte_campo,
+                    largura_maxima=150,
+                    anchor="mm",
+                )
+                self._desenhar_texto_os(
+                    draw,
+                    ((qtd_x + valor_x) // 2, y_item + 7),
+                    descricao,
+                    fonte_campo,
+                    largura_maxima=720,
+                    anchor="mm",
+                )
+                self._desenhar_texto_os(
+                    draw,
+                    ((valor_x + direita) // 2, y_item + 7),
+                    valor,
+                    fonte_campo,
+                    largura_maxima=185,
+                    anchor="mm",
+                )
+                y_item += altura_linha
+
+            draw.text(
+                (direita - 20, altura - 35),
+                f"Continuação da Ordem de Serviço - Página {numero_pagina}",
+                fill=preto,
+                font=fonte_pequena,
+                anchor="ra",
+            )
+
+            return imagem
+
+        except Exception as e:
+            messagebox.showerror(
+                "Erro",
+                f"Não foi possível gerar a continuação da Ordem de Serviço:\n{e}"
+            )
+            return None
+
+    def _gerar_paginas_visualizacao_os(self):
+        primeira_pagina = self._gerar_imagem_visualizacao_os()
+
+        if not primeira_pagina:
+            return []
+
+        itens = self._coletar_itens_visualizacao_os()
+        paginas = [primeira_pagina]
+
+        limite_primeira_pagina = 19
+        limite_continuacao = 36
+
+        itens_restantes = itens[limite_primeira_pagina:]
+        numero_pagina = 2
+
+        for inicio in range(0, len(itens_restantes), limite_continuacao):
+            bloco = itens_restantes[inicio:inicio + limite_continuacao]
+            pagina = self._gerar_imagem_continuacao_os(bloco, numero_pagina)
+
+            if pagina:
+                paginas.append(pagina)
+
+            numero_pagina += 1
+
+        return paginas
+
     def salvar_os(self):
         if not self.cliente_os_id:
             messagebox.showwarning("Atenção", "Selecione um cliente antes de criar a OS.")
@@ -5708,10 +5819,10 @@ class OrdemServicoFrame(tk.Frame):
             return
 
         self._formatar_mao_obra_os()
-        imagem_os = self._gerar_imagem_visualizacao_os()
+        paginas_os = self._gerar_paginas_visualizacao_os()
 
-        if imagem_os:
-            OrdemServicoPreview(self, imagem_os)
+        if paginas_os:
+            OrdemServicoPreview(self, paginas_os)
 
     def refresh(self):
         pass
@@ -5719,10 +5830,16 @@ class OrdemServicoFrame(tk.Frame):
 
 
 class OrdemServicoPreview(tk.Toplevel):
-    def __init__(self, parent, imagem_os):
+    def __init__(self, parent, paginas_os):
         super().__init__(parent)
         self.parent = parent
-        self.imagem_os_original = imagem_os
+
+        if isinstance(paginas_os, list):
+            self.paginas_os = paginas_os
+        else:
+            self.paginas_os = [paginas_os]
+
+        self.imagem_os_original = self.paginas_os[0]
 
         self.title("Visualização da Ordem de Serviço")
 
@@ -5742,9 +5859,13 @@ class OrdemServicoPreview(tk.Toplevel):
         topo = tk.Frame(self, bg="#f5f6f8")
         topo.pack(fill="x", padx=12, pady=(10, 6))
 
+        titulo = "Pré-visualização da Ordem de Serviço"
+        if len(self.paginas_os) > 1:
+            titulo += f" ({len(self.paginas_os)} páginas)"
+
         tk.Label(
             topo,
-            text="Pré-visualização da Ordem de Serviço",
+            text=titulo,
             bg="#f5f6f8",
             fg="#111827",
             font=("Segoe UI", 14, "bold"),
@@ -5811,13 +5932,12 @@ class OrdemServicoPreview(tk.Toplevel):
         self.frame_imagem.bind("<Configure>", self._atualizar_scroll)
         self.canvas.bind("<Configure>", self._redimensionar_preview)
 
-        self.imagem_tk = None
-        self.label_imagem = tk.Label(self.frame_imagem, bg="#e5e7eb")
-        self.label_imagem.pack(padx=12, pady=12)
+        self.imagens_tk = []
+        self.labels_paginas = []
 
         self._renderizar_imagem()
 
-    def _salvar_imagem_os_temporaria(self):
+    def _pasta_os(self):
         pasta_documentos = os.path.join(os.path.expanduser("~"), "Documents")
 
         if not os.path.exists(pasta_documentos):
@@ -5830,7 +5950,9 @@ class OrdemServicoPreview(tk.Toplevel):
         )
 
         os.makedirs(pasta_os, exist_ok=True)
+        return pasta_os
 
+    def _nome_arquivo_base_os(self):
         nome_cliente = "cliente"
 
         try:
@@ -5844,14 +5966,67 @@ class OrdemServicoPreview(tk.Toplevel):
         ).strip("_")
 
         data_arquivo = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-        nome_arquivo = f"OS_{nome_cliente}_{data_arquivo}.png"
+        return f"OS_{nome_cliente}_{data_arquivo}"
 
-        caminho = os.path.join(pasta_os, nome_arquivo)
-        self.imagem_os_original.save(caminho)
+    def _preparar_pagina_a4(self, img):
+        img = img.convert("RGB")
+
+        a4_largura = 2480
+        a4_altura = 3508
+
+        pagina = Image.new("RGB", (a4_largura, a4_altura), "white")
+
+        margem_lateral = 80
+        margem_superior = 80
+        margem_inferior = 80
+
+        area_largura = a4_largura - (margem_lateral * 2)
+        area_altura = a4_altura - margem_superior - margem_inferior
+
+        proporcao_img = img.width / img.height
+        proporcao_area = area_largura / area_altura
+
+        if proporcao_img > proporcao_area:
+            nova_largura = area_largura
+            nova_altura = int(nova_largura / proporcao_img)
+        else:
+            nova_altura = area_altura
+            nova_largura = int(nova_altura * proporcao_img)
+
+        img = img.resize((nova_largura, nova_altura), Image.LANCZOS)
+
+        x = (a4_largura - nova_largura) // 2
+        y = margem_superior + ((area_altura - nova_altura) // 2)
+
+        pagina.paste(img, (x, y))
+        return pagina
+
+    def _salvar_arquivo_os_temporario(self):
+        pasta_os = self._pasta_os()
+        nome_base = self._nome_arquivo_base_os()
+
+        if len(self.paginas_os) > 1:
+            caminho = os.path.join(pasta_os, f"{nome_base}.pdf")
+            paginas_pdf = [self._preparar_pagina_a4(pagina) for pagina in self.paginas_os]
+            paginas_pdf[0].save(
+                caminho,
+                "PDF",
+                resolution=300.0,
+                save_all=True,
+                append_images=paginas_pdf[1:]
+            )
+            return caminho
+
+        caminho = os.path.join(pasta_os, f"{nome_base}.png")
+        self.paginas_os[0].save(caminho)
         return caminho
 
+    # Mantém compatibilidade com chamadas antigas dentro da própria classe.
+    def _salvar_imagem_os_temporaria(self):
+        return self._salvar_arquivo_os_temporario()
+
     def enviar_para_cliente(self):
-        caminho_salvo = self._salvar_imagem_os_temporaria()
+        caminho_salvo = self._salvar_arquivo_os_temporario()
 
         telefone = simpledialog.askstring(
             "Enviar para Cliente",
@@ -5872,6 +6047,19 @@ class OrdemServicoPreview(tk.Toplevel):
             )
             return
 
+        if caminho_salvo.lower().endswith(".pdf"):
+            messagebox.showinfo(
+                "Arquivo pronto para envio",
+                "✓ Clique em:\n\nDOCUMENTO\n\nDepois selecione a Ordem de Serviço para enviar ao cliente.",
+                parent=self,
+            )
+        else:
+            messagebox.showinfo(
+                "Arquivo pronto para envio",
+                "✓ Clique em:\n\nFOTOS E VÍDEOS\n\nDepois selecione a Ordem de Serviço para enviar ao cliente.",
+                parent=self,
+            )
+
         mensagem = (
             "Olá!\n\n"
             "Segue a Ordem de Serviço da Juliano Automecânica. 🔧\n\n"
@@ -5885,7 +6073,7 @@ class OrdemServicoPreview(tk.Toplevel):
             webbrowser.open(url)
             messagebox.showinfo(
                 "Enviar para Cliente",
-                f"WhatsApp aberto.\n\nAnexe a imagem da OS salva em:\n{caminho_salvo}",
+                f"WhatsApp aberto.\n\nAnexe o arquivo da OS salvo em:\n{caminho_salvo}",
                 parent=self,
             )
         except Exception as e:
@@ -5898,43 +6086,19 @@ class OrdemServicoPreview(tk.Toplevel):
     def imprimir_os(self):
         try:
             # Salva uma cópia da OS na pasta de Ordens de Serviço
-            self._salvar_imagem_os_temporaria()
+            self._salvar_arquivo_os_temporario()
 
-            img = self.imagem_os_original.convert("RGB")
-
-            # A4 em retrato com boa qualidade, igual ao orçamento
-            a4_largura = 2480
-            a4_altura = 3508
-
-            pagina = Image.new("RGB", (a4_largura, a4_altura), "white")
-
-            margem_lateral = 80
-            margem_superior = 80
-            margem_inferior = 80
-
-            area_largura = a4_largura - (margem_lateral * 2)
-            area_altura = a4_altura - margem_superior - margem_inferior
-
-            proporcao_img = img.width / img.height
-            proporcao_area = area_largura / area_altura
-
-            if proporcao_img > proporcao_area:
-                nova_largura = area_largura
-                nova_altura = int(nova_largura / proporcao_img)
-            else:
-                nova_altura = area_altura
-                nova_largura = int(nova_altura * proporcao_img)
-
-            img = img.resize((nova_largura, nova_altura), Image.LANCZOS)
-
-            x = (a4_largura - nova_largura) // 2
-            y = margem_superior + ((area_altura - nova_altura) // 2)
-
-            pagina.paste(img, (x, y))
+            paginas_pdf = [self._preparar_pagina_a4(pagina) for pagina in self.paginas_os]
 
             pasta_temp = tempfile.gettempdir()
             caminho_pdf = os.path.join(pasta_temp, "os_impressao_temp.pdf")
-            pagina.save(caminho_pdf, "PDF", resolution=300.0)
+            paginas_pdf[0].save(
+                caminho_pdf,
+                "PDF",
+                resolution=300.0,
+                save_all=True,
+                append_images=paginas_pdf[1:]
+            )
 
             try:
                 os.startfile(caminho_pdf, "print")
@@ -5958,19 +6122,39 @@ class OrdemServicoPreview(tk.Toplevel):
         largura_canvas = max(self.canvas.winfo_width(), 760)
         largura_alvo = min(760, largura_canvas - 40)
 
-        largura_original, altura_original = self.imagem_os_original.size
-        proporcao = largura_alvo / largura_original
-        altura_alvo = int(altura_original * proporcao)
+        for label in self.labels_paginas:
+            label.destroy()
 
-        imagem_redimensionada = self.imagem_os_original.resize(
-            (int(largura_alvo), altura_alvo),
-            Image.LANCZOS
-        )
+        self.labels_paginas = []
+        self.imagens_tk = []
 
-        self.imagem_tk = ImageTk.PhotoImage(imagem_redimensionada)
-        self.label_imagem.configure(image=self.imagem_tk)
+        for indice, pagina_original in enumerate(self.paginas_os, start=1):
+            largura_original, altura_original = pagina_original.size
+            proporcao = largura_alvo / largura_original
+            altura_alvo = int(altura_original * proporcao)
+
+            imagem_redimensionada = pagina_original.resize(
+                (int(largura_alvo), altura_alvo),
+                Image.LANCZOS
+            )
+
+            imagem_tk = ImageTk.PhotoImage(imagem_redimensionada)
+            self.imagens_tk.append(imagem_tk)
+
+            if len(self.paginas_os) > 1:
+                tk.Label(
+                    self.frame_imagem,
+                    text=f"Página {indice}",
+                    bg="#e5e7eb",
+                    fg="#111827",
+                    font=("Segoe UI", 11, "bold"),
+                ).pack(pady=(12 if indice == 1 else 22, 0))
+
+            label = tk.Label(self.frame_imagem, image=imagem_tk, bg="#e5e7eb")
+            label.pack(padx=12, pady=12)
+            self.labels_paginas.append(label)
+
         self._atualizar_scroll()
-
 
 
 class ItemOSDialog(tk.Toplevel):
