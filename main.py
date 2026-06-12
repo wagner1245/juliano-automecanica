@@ -4549,7 +4549,7 @@ class OrdemServicoFrame(tk.Frame):
             for nome_arquivo in os.listdir(pasta_orcamentos):
                 nome_maiusculo = nome_arquivo.upper()
 
-                if not nome_maiusculo.lower().endswith((".jpg", ".jpeg", ".pdf")):
+                if not nome_maiusculo.lower().endswith((".jpg", ".jpeg")):
                     continue
 
                 nome_sem_extensao = os.path.splitext(nome_maiusculo)[0]
@@ -5953,20 +5953,46 @@ class OrdemServicoPreview(tk.Toplevel):
         return pasta_os
 
     def _nome_arquivo_base_os(self):
-        nome_cliente = "cliente"
+        placa = ""
 
         try:
-            nome_cliente = self.parent.os_nome_var.get().strip() or "cliente"
+            placa = self.parent.os_placa_var.get().strip()
         except Exception:
-            pass
+            placa = ""
 
-        nome_cliente = "".join(
-            ch if ch.isalnum() else "_"
-            for ch in nome_cliente.upper()
-        ).strip("_")
+        if not placa or placa == "-":
+            try:
+                placa = self.parent.busca_cliente_os_var.get().strip()
+            except Exception:
+                placa = ""
 
-        data_arquivo = datetime.now().strftime("%d-%m-%Y_%H-%M-%S")
-        return f"OS_{nome_cliente}_{data_arquivo}"
+        placa = "".join(
+            ch for ch in str(placa).upper()
+            if ch.isalnum()
+        )
+
+        if placa:
+            return placa
+
+        return f"OS_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
+
+    def _proximo_caminho_arquivo_os(self, pasta_os, nome_base, extensao):
+        caminho = os.path.join(pasta_os, f"{nome_base}{extensao}")
+
+        if not os.path.exists(caminho):
+            return caminho
+
+        contador = 2
+        while True:
+            caminho_incremental = os.path.join(
+                pasta_os,
+                f"{nome_base}_{contador:02d}{extensao}"
+            )
+
+            if not os.path.exists(caminho_incremental):
+                return caminho_incremental
+
+            contador += 1
 
     def _preparar_pagina_a4(self, img):
         img = img.convert("RGB")
@@ -6006,7 +6032,7 @@ class OrdemServicoPreview(tk.Toplevel):
         nome_base = self._nome_arquivo_base_os()
 
         if len(self.paginas_os) > 1:
-            caminho = os.path.join(pasta_os, f"{nome_base}.pdf")
+            caminho = self._proximo_caminho_arquivo_os(pasta_os, nome_base, ".pdf")
             paginas_pdf = [self._preparar_pagina_a4(pagina) for pagina in self.paginas_os]
             paginas_pdf[0].save(
                 caminho,
@@ -6017,7 +6043,7 @@ class OrdemServicoPreview(tk.Toplevel):
             )
             return caminho
 
-        caminho = os.path.join(pasta_os, f"{nome_base}.png")
+        caminho = self._proximo_caminho_arquivo_os(pasta_os, nome_base, ".png")
         self.paginas_os[0].save(caminho)
         return caminho
 
